@@ -21,7 +21,7 @@
 
 namespace WorldPackets
 {
-    namespace AuthenticationPackets
+    namespace AuthPackets
     {
         class AuthResponse final : public ServerPacket
         {

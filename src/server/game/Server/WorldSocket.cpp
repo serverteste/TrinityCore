@@ -567,12 +567,12 @@ void WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
 
 void WorldSocket::SendAuthResponseError(uint8 code)
 {
-    WorldPackets::AuthenticationPackets::AuthResponse response;
+    WorldPackets::AuthPackets::AuthResponse response;
     response.HasAccountInfo = false;
     response.Queued = false;
     response.Response = code;
 
-    _worldSession->Send(response);
+    _worldSession->SendPacket(response);
 }
 
 void WorldSocket::HandlePing(WorldPacket& recvPacket)

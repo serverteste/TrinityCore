@@ -22,7 +22,7 @@
 
 void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
 {
-    WorldPackets::AuthenticationPackets::AuthResponse authResponse;
+    WorldPackets::AuthPackets::AuthResponse authResponse;
 
     authResponse.HasAccountInfo = true;
     authResponse.Expansion = Expansion();
@@ -30,7 +30,7 @@ void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
     authResponse.QueuePos = queuePos;
     authResponse.Response = code;
 
-    Send(authResponse);
+    SendPacket(authResponse);
 }
 
 void WorldSession::SendClientCacheVersion(uint32 version)

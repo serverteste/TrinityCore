@@ -691,7 +691,7 @@ void WorldSession::Handle_Deprecated(WorldPacket& recvPacket)
 
 void WorldSession::SendAuthWaitQue(uint32 position)
 {
-    WorldPackets::AuthenticationPackets::AuthResponse response;
+    WorldPackets::AuthPackets::AuthResponse response;
 
     if (position == 0)
     {
@@ -707,7 +707,7 @@ void WorldSession::SendAuthWaitQue(uint32 position)
         response.Response = AUTH_WAIT_QUEUE;
     }
 
-    Send(response);
+    SendPacket(response);
 }
 
 void WorldSession::LoadGlobalAccountData()
@@ -1177,7 +1177,7 @@ void WorldSession::InvalidateRBACData()
     _RBACData = NULL;
 }
 
-void WorldSession::Send(WorldPackets::ServerPacket& packet)
+void WorldSession::SendPacket(WorldPackets::ServerPacket const& packet)
 {
     // Send it here
 }

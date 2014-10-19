@@ -17,7 +17,7 @@
 
 #include "AuthenticationPackets.h"
 
-WorldPackets::AuthenticationPackets::AuthResponse::AuthResponse() : ServerPacket(SMSG_AUTH_RESPONSE, 1 + 4 + 1 + 4 + 1 + 4 + 1 + 1 + 4)
+WorldPackets::AuthPackets::AuthResponse::AuthResponse() : ServerPacket(SMSG_AUTH_RESPONSE, 1 + 4 + 1 + 4 + 1 + 4 + 1 + 1 + 4)
 {
     // Initialize the default fields
     Unknown1 = 0;
@@ -28,7 +28,7 @@ WorldPackets::AuthenticationPackets::AuthResponse::AuthResponse() : ServerPacket
     BillingTimeReset = 0;
 }
 
-void WorldPackets::AuthenticationPackets::AuthResponse::Write()
+void WorldPackets::AuthPackets::AuthResponse::Write()
 {
     _worldPacket.WriteBit(Queued);
     if (Queued)
@@ -51,7 +51,7 @@ void WorldPackets::AuthenticationPackets::AuthResponse::Write()
         _worldPacket << uint32(QueuePos);
 }
 
-std::string WorldPackets::AuthenticationPackets::AuthResponse::ToString() const
+std::string WorldPackets::AuthPackets::AuthResponse::ToString() const
 {
     // Perhaps write some additional data here
     return "WorldPackets::AuthenticationPackets::AuthResponse";

@@ -267,6 +267,7 @@ class WorldSession
         void SendAddonsInfo();
         bool IsAddonRegistered(const std::string& prefix) const;
 
+        void SendPacket(WorldPackets::ServerPacket const& packet);
         void SendPacket(WorldPacket* packet, bool forced = false);
         void SendNotification(const char *format, ...) ATTR_PRINTF(2, 3);
         void SendNotification(uint32 string_id, ...);
@@ -1138,7 +1139,6 @@ class WorldSession
 
         WorldSession(WorldSession const& right) = delete;
         WorldSession& operator=(WorldSession const& right) = delete;
-        void Send(WorldPackets::ServerPacket& packet);
 };
 #endif
 /// @}
