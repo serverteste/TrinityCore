@@ -1180,6 +1180,11 @@ void WorldSession::InvalidateRBACData()
     _RBACData = NULL;
 }
 
+void WorldSession::Send(WorldPackets::ServerPacket* authResponse)
+{
+    // Send it here
+}
+
 bool WorldSession::DosProtection::EvaluateOpcode(WorldPacket& p, time_t time) const
 {
     uint32 maxPacketCounterAllowed = GetMaxPacketCounterAllowed(p.GetOpcode());

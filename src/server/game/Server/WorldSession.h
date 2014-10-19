@@ -1138,6 +1138,7 @@ class WorldSession
 
         WorldSession(WorldSession const& right) = delete;
         WorldSession& operator=(WorldSession const& right) = delete;
+        void Send(WorldPackets::ServerPacket* authResponse);
 };
 #endif
 /// @}

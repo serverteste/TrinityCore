@@ -18,31 +18,24 @@
 #include "Opcodes.h"
 #include "WorldSession.h"
 #include "WorldPacket.h"
+#include "AuthenticationPackets.h"
 
 void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
 {
-    WorldPacket packet(SMSG_AUTH_RESPONSE, 1 /*bits*/ + 4 + 1 + 4 + 1 + 4 + 1 + 1 + (queued ? 4 : 0));
-    packet.WriteBit(queued);
-    if (queued)
-        packet.WriteBit(0);
+    auto authResponse = new WorldPackets::AuthenticationPackets::AuthResponse();
 
-    packet.WriteBit(1);                                    // has account info
+    authResponse->HasAccountInfo = true;
+    authResponse->BillingPlanFlags = 0;
+    authResponse->BillingTimeRemaining = 0;
+    authResponse->BillingTimeReset = 0;
+    authResponse->Expansion = Expansion();
+    authResponse->Queued = queued;
+    authResponse->QueuePos = queuePos;
+    authResponse->Response = code;
+    authResponse->Unknown1 = 0;
+    authResponse->Unknown2 = 0;
 
-    packet.FlushBits();
-
-    // account info
-    packet << uint32(0);                                   // BillingTimeRemaining
-    packet << uint8(Expansion());                          // 0 - normal, 1 - TBC, 2 - WOTLK, 3 - CATA; must be set in database manually for each account
-    packet << uint32(0);
-    packet << uint8(Expansion());                          // Unknown, these two show the same
-    packet << uint32(0);                                   // BillingTimeRested
-    packet << uint8(0);                                    // BillingPlanFlags
-
-    packet << uint8(code);
-    if (queued)
-        packet << uint32(queuePos);                             // Queue position
-
-    SendPacket(&packet);
+    Send(authResponse);
 }
 
 void WorldSession::SendClientCacheVersion(uint32 version)
