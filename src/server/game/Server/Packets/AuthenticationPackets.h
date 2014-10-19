@@ -26,9 +26,7 @@ namespace WorldPackets
         class AuthResponse final : public ServerPacket
         {
         public:
-            AuthResponse() : ServerPacket(SMSG_AUTH_RESPONSE, 1 + 4 + 1 + 4 + 1 + 4 + 1 + 1 + 4)
-            { 
-            }
+            AuthResponse();
 
             void Write() override;
             std::string ToString() const override;

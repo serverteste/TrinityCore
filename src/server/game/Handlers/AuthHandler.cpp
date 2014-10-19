@@ -22,18 +22,13 @@
 
 void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
 {
-    auto authResponse = new WorldPackets::AuthenticationPackets::AuthResponse();
+    WorldPackets::AuthenticationPackets::AuthResponse authResponse;
 
-    authResponse->HasAccountInfo = true;
-    authResponse->BillingPlanFlags = 0;
-    authResponse->BillingTimeRemaining = 0;
-    authResponse->BillingTimeReset = 0;
-    authResponse->Expansion = Expansion();
-    authResponse->Queued = queued;
-    authResponse->QueuePos = queuePos;
-    authResponse->Response = code;
-    authResponse->Unknown1 = 0;
-    authResponse->Unknown2 = 0;
+    authResponse.HasAccountInfo = true;
+    authResponse.Expansion = Expansion();
+    authResponse.Queued = queued;
+    authResponse.QueuePos = queuePos;
+    authResponse.Response = code;
 
     Send(authResponse);
 }

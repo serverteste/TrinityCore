@@ -691,26 +691,23 @@ void WorldSession::Handle_Deprecated(WorldPacket& recvPacket)
 
 void WorldSession::SendAuthWaitQue(uint32 position)
 {
+    WorldPackets::AuthenticationPackets::AuthResponse response;
+
     if (position == 0)
     {
-        WorldPacket packet(SMSG_AUTH_RESPONSE, 1);
-        packet.WriteBit(0); // has queue info
-        packet.WriteBit(0); // has account info
-        packet.FlushBits();
-        packet << uint8(AUTH_OK);
-        SendPacket(&packet);
+        response.Response = AUTH_OK;
+        response.HasAccountInfo = false;
+        response.Queued = false;
     }
     else
     {
-        WorldPacket packet(SMSG_AUTH_RESPONSE, 6);
-        packet.WriteBit(1); // has queue info
-        packet.WriteBit(0); // unk queue bool
-        packet.WriteBit(0); // has account info
-        packet.FlushBits();
-        packet << uint8(AUTH_WAIT_QUEUE);
-        packet << uint32(position);
-        SendPacket(&packet);
+        response.Queued = true;
+        response.HasAccountInfo = false;
+        response.QueuePos = position;
+        response.Response = AUTH_WAIT_QUEUE;
     }
+
+    Send(response);
 }
 
 void WorldSession::LoadGlobalAccountData()
@@ -1180,7 +1177,7 @@ void WorldSession::InvalidateRBACData()
     _RBACData = NULL;
 }
 
-void WorldSession::Send(WorldPackets::ServerPacket* authResponse)
+void WorldSession::Send(WorldPackets::ServerPacket& packet)
 {
     // Send it here
 }

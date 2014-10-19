@@ -17,6 +17,17 @@
 
 #include "AuthenticationPackets.h"
 
+WorldPackets::AuthenticationPackets::AuthResponse::AuthResponse() : ServerPacket(SMSG_AUTH_RESPONSE, 1 + 4 + 1 + 4 + 1 + 4 + 1 + 1 + 4)
+{
+    // Initialize the default fields
+    Unknown1 = 0;
+    Unknown2 = 0;
+    HasAccountInfo = true;
+    BillingTimeRemaining = 0;
+    BillingPlanFlags = 0;
+    BillingTimeReset = 0;
+}
+
 void WorldPackets::AuthenticationPackets::AuthResponse::Write()
 {
     _worldPacket.WriteBit(Queued);
