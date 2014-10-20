@@ -23,7 +23,7 @@ namespace WorldPackets
     class Packet
     {
     public:
-        Packet(WorldPacket&& worldPacket) : _worldPacket(_worldPacket) { }
+        Packet(WorldPacket&& worldPacket) : _worldPacket(std::move(worldPacket)) { }
         virtual ~Packet() = default;
 
         Packet(Packet const& right) = delete;
@@ -34,7 +34,7 @@ namespace WorldPackets
 
         virtual std::string ToString() const = 0;
 
-        WorldPacket* GetWorldPacket() const { return &_worldPacket; }
+        WorldPacket* GetWorldPacket() { return &_worldPacket; }
 
     protected:
         WorldPacket _worldPacket;

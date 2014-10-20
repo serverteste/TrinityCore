@@ -273,8 +273,9 @@ void WorldSession::SendPacket(WorldPacket* packet, bool forced /*= false*/)
     m_Socket->SendPacket(*packet);
 }
 
-void WorldSession::SendPacket(WorldPackets::ServerPacket const& packet)
+void WorldSession::SendPacket(WorldPackets::ServerPacket& packet)
 {
+    packet.Write();
     SendPacket(packet.GetWorldPacket());
 }
 

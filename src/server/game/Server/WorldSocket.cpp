@@ -332,6 +332,12 @@ void WorldSocket::SendPacket(WorldPacket& packet)
     }
 }
 
+void WorldSocket::SendPacket(WorldPackets::ServerPacket& packet)
+{
+    packet.Write();
+    SendPacket(*packet.GetWorldPacket());
+}
+
 void WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
 {
     uint8 digest[SHA_DIGEST_LENGTH];
@@ -594,7 +600,7 @@ void WorldSocket::SendAuthResponseError(uint8 code)
     response.Queued = false;
     response.Result = code;
 
-    _worldSession->SendPacket(response);
+    SendPacket(response);
 }
 
 void WorldSocket::HandlePing(WorldPacket& recvPacket)

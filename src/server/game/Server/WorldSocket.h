@@ -32,6 +32,11 @@
 
 using boost::asio::ip::tcp;
 
+namespace WorldPackets
+{
+    class ServerPacket;
+}
+
 #pragma pack(push, 1)
 
 union ClientPktHeader
@@ -71,6 +76,7 @@ public:
     void Start() override;
 
     void SendPacket(WorldPacket& packet);
+    void SendPacket(WorldPackets::ServerPacket& packet);
 
 protected:
     void ReadHandler() override;

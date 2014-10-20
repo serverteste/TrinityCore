@@ -74,14 +74,11 @@ void WorldPackets::AuthPackets::AuthResponse::Write()
                 _worldPacket << uint8(templatClass.FactionGroup);
             }
 
-            _worldPacket.FlushBits();
             _worldPacket.WriteBits(templat.Name.length(), 7);
             _worldPacket.WriteBits(templat.Description.length(), 10);
             _worldPacket.WriteString(templat.Name);
             _worldPacket.WriteString(templat.Description);
         }
-
-        _worldPacket.FlushBits();
 
         _worldPacket.WriteBit(IsExpansionTrial);
         _worldPacket.WriteBit(ForceCharacterTemplate);
