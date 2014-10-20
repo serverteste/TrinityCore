@@ -927,38 +927,39 @@ void WorldSession::SendAddonsInfo()
         0x0D, 0x36, 0xEA, 0x01, 0xE0, 0xAA, 0x91, 0x20, 0x54, 0xF0, 0x72, 0xD8, 0x1E, 0xC7, 0x89, 0xD2
     };
 
+
     WorldPacket data(SMSG_ADDON_INFO, 4);
+    AddonMgr::BannedAddonList const* bannedAddons = AddonMgr::GetBannedAddons();
+
+    data << uint32(m_addonsList.size());
+    data << uint32(bannedAddons->size());
 
     for (AddonsList::iterator itr = m_addonsList.begin(); itr != m_addonsList.end(); ++itr)
     {
+        bool sendCRC = itr->UsePublicKeyOrCRC && itr->CRC != STANDARD_ADDON_CRC;
         data << uint8(itr->State);
 
-        uint8 crcpub = itr->UsePublicKeyOrCRC;
-        data << uint8(crcpub);
-        if (crcpub)
+        data.WriteBit(itr->Enabled);
+        data.WriteBit(sendCRC);
+        data.WriteBit(0); // Has URL
+
+        if (itr->Enabled)
         {
-            uint8 usepk = (itr->CRC != STANDARD_ADDON_CRC); // If addon is Standard addon CRC
-            data << uint8(usepk);
-            if (usepk)                                      // if CRC is wrong, add public key (client need it)
-            {
-                TC_LOG_INFO("misc", "ADDON: CRC (0x%x) for addon %s is wrong (does not match expected 0x%x), sending pubkey",
-                    itr->CRC, itr->Name.c_str(), STANDARD_ADDON_CRC);
-
-                data.append(addonPublicKey, sizeof(addonPublicKey));
-            }
-
-            data << uint32(0);                              /// @todo Find out the meaning of this.
+            data << uint8(itr->Enabled);
+            data << uint32(0);
         }
 
-        data << uint8(0);       // uses URL
-        //if (usesURL)
-        //    data << uint8(0); // URL
+        if (sendCRC)
+        {
+            TC_LOG_INFO("misc", "ADDON: CRC (0x%x) for addon %s is wrong (does not match expected 0x%x), sending pubkey",
+                itr->CRC, itr->Name.c_str(), STANDARD_ADDON_CRC);
+
+            data.append(addonPublicKey, sizeof(addonPublicKey));
+        }
     }
 
     m_addonsList.clear();
 
-    AddonMgr::BannedAddonList const* bannedAddons = AddonMgr::GetBannedAddons();
-    data << uint32(bannedAddons->size());
     for (AddonMgr::BannedAddonList::const_iterator itr = bannedAddons->begin(); itr != bannedAddons->end(); ++itr)
     {
         data << uint32(itr->Id);
@@ -967,6 +968,7 @@ void WorldSession::SendAddonsInfo()
         data << uint32(itr->Timestamp);
         data << uint32(1);  // IsBanned
     }
+
 
     SendPacket(&data);
 }
@@ -1239,6 +1241,7 @@ uint32 WorldSession::DosProtection::GetMaxPacketCounterAllowed(uint16 opcode) co
     uint32 maxPacketCounterAllowed;
     switch (opcode)
     {
+        /*
         // CPU usage sending 2000 packets/second on a 3.70 GHz 4 cores on Win x64
         //                                              [% CPU mysqld]   [%CPU worldserver RelWithDebInfo]
         case CMSG_PLAYER_LOGIN:                         //   0               0.5
@@ -1471,7 +1474,7 @@ uint32 WorldSession::DosProtection::GetMaxPacketCounterAllowed(uint16 opcode) co
             maxPacketCounterAllowed = PLAYER_SLOTS_COUNT;
             break;
         }
-
+        */
         default:
         {
             maxPacketCounterAllowed = 100;

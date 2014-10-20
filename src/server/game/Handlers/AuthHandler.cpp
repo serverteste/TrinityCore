@@ -15,6 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "WorldSession.h"
 #include "WorldPacket.h"
@@ -22,15 +23,23 @@
 
 void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
 {
-    WorldPackets::AuthPackets::AuthResponse authResponse;
+    ExpansionRequirementContainer const& raceExpansions = sObjectMgr->GetRaceExpansionRequirements();
+    ExpansionRequirementContainer const& classExpansions = sObjectMgr->GetClassExpansionRequirements();
 
-    authResponse.HasAccountInfo = true;
-    authResponse.Expansion = Expansion();
-    authResponse.Queued = queued;
-    authResponse.QueuePos = queuePos;
-    authResponse.Response = code;
+    WorldPackets::AuthPackets::AuthResponse response(raceExpansions, classExpansions);
+    response.Response = code;
+    response.Queued = queued;
+    response.QueuePos = queuePos;
+    response.AccountExpansion = Expansion();
+    response.ActiveExpansion = Expansion();
+    response.VirtualRealmAddress = realmHandle.Index;
 
-    SendPacket(authResponse);
+    std::string realmName = sObjectMgr->GetRealmName(realmHandle.Index);
+
+    // Send current home realm. Also there is no need to send it later in realm queries.
+    response.ConnectedRealms.emplace_back({realmHandle.Index, true, false, realmName, realmName});
+
+    SendPacket(response);
 }
 
 void WorldSession::SendClientCacheVersion(uint32 version)
