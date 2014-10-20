@@ -25,7 +25,7 @@ WorldPackets::AuthPackets::AuthResponse::AuthResponse() : ServerPacket(SMSG_AUTH
     HasAccountInfo = true;
     BillingTimeRemaining = 0;
     BillingPlanFlags = 0;
-    BillingTimeReset = 0;
+    BillingTimeRested = 0;
 }
 
 void WorldPackets::AuthPackets::AuthResponse::Write()
@@ -43,7 +43,7 @@ void WorldPackets::AuthPackets::AuthResponse::Write()
     _worldPacket << uint8(Expansion);
     _worldPacket << uint32(Unknown2);
     _worldPacket << uint8(Expansion);
-    _worldPacket << uint32(BillingTimeReset);
+    _worldPacket << uint32(BillingTimeRested);
     _worldPacket << uint8(BillingPlanFlags);
 
     _worldPacket << uint8(Response);
