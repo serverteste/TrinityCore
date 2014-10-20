@@ -24,7 +24,7 @@ namespace WorldPackets
     {
     public:
         Packet(WorldPacket&& worldPacket) : _worldPacket(_worldPacket) { }
-        virtual ~Packet() { }
+        virtual ~Packet() = default;
 
         Packet(Packet const& right) = delete;
         Packet& operator=(Packet const& right) = delete;
@@ -37,14 +37,13 @@ namespace WorldPackets
         WorldPacket* GetWorldPacket() const { return &_worldPacket; }
 
     protected:
-        WorldPacket& _worldPacket;
+        WorldPacket _worldPacket;
     };
 
     class ServerPacket : public Packet
     {
     public:
         ServerPacket(Opcodes opcode, size_t initialSize);
-        ~ServerPacket();
 
         void Read() override final { ASSERT(!"Read not implemented for server packets."); }
 

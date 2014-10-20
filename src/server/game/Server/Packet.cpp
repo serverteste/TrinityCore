@@ -20,7 +20,3 @@
 WorldPackets::ServerPacket::ServerPacket(Opcodes opcode, size_t initialSize = 200) : Packet(WorldPacket(opcode, initialSize))
 {
 }
-
-WorldPackets::ServerPacket::~ServerPacket()
-{
-}
