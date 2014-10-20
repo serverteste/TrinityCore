@@ -23,7 +23,7 @@ namespace WorldPackets
     class Packet
     {
     public:
-        Packet(WorldPacket& worldPacket) : _worldPacket(worldPacket) { }
+        Packet(WorldPacket&& worldPacket) : _worldPacket(_worldPacket) { }
         virtual ~Packet() { }
 
         Packet(Packet const& right) = delete;

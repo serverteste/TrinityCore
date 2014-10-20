@@ -17,11 +17,10 @@
 
 #include "Packet.h"
 
-WorldPackets::ServerPacket::ServerPacket(Opcodes opcode, size_t initialSize = 200) : Packet(*new WorldPacket(opcode, initialSize))
+WorldPackets::ServerPacket::ServerPacket(Opcodes opcode, size_t initialSize = 200) : Packet(WorldPacket(opcode, initialSize))
 {
 }
 
 WorldPackets::ServerPacket::~ServerPacket()
 {
-    delete &_worldPacket;
 }

@@ -43,8 +43,8 @@ void WorldPackets::AuthPackets::AuthResponse::Write()
 
         for (auto& realm : VirtualRealms)
         {
-            _worldPacket << uint32(realm.RealmId);
-            _worldPacket.WriteBit(realm.IsHomeRealm);
+            _worldPacket << uint32(realm.RealmAddress);
+            _worldPacket.WriteBit(realm.IsLocal);
             _worldPacket.WriteBit(realm.IsInternalRealm);
             _worldPacket.WriteBits(realm.RealmNameActual.length(), 8);
             _worldPacket.WriteBits(realm.RealmNameNormalized.length(), 8);
