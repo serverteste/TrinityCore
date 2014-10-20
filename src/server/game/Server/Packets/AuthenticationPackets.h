@@ -1,21 +1,21 @@
 /*
-* Copyright (C) 2008-2014 TrinityCore <http://www.trinitycore.org/>
-*
-* This program is free software; you can redistribute it and/or modify it
-* under the terms of the GNU General Public License as published by the
-* Free Software Foundation; either version 2 of the License, or (at your
-* option) any later version.
-*
-* This program is distributed in the hope that it will be useful, but WITHOUT
-* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-* more details.
-*
-* You should have received a copy of the GNU General Public License along
-* with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2008-2014 TrinityCore <http://www.trinitycore.org/>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef AuthenticationPacketsWorld_h__
+#ifndef AuthenticationPackets_h__
 
 #include "Packet.h"
 
@@ -28,12 +28,13 @@ namespace WorldPackets
         public:
             struct RealmInfo
             {
-                RealmInfo(uint32 realmId, bool isHomeRealm, bool isInternalRealm, std::string& realmNameActual, std::string& realmNameNormalized) :
-                    RealmId(realmId), IsHomeRealm(IsHomeRealm), IsInternalRealm(isInternalRealm), RealmNameActual(realmNameActual), RealmNameNormalized(realmNameNormalized) { }
-                uint32 RealmId; ///< the id of this realm
-                bool IsHomeRealm; ///< true if the realm is the same as the account's home realm
+                RealmInfo(uint32 realmId, bool isHomeRealm, bool isInternalRealm, std::string const& realmNameActual, std::string const& realmNameNormalized) :
+                    RealmId(realmId), IsHomeRealm(isHomeRealm), IsInternalRealm(isInternalRealm), RealmNameActual(realmNameActual), RealmNameNormalized(realmNameNormalized) { }
+
+                uint32 RealmId;                  ///< the id of this realm
+                bool IsHomeRealm;                ///< true if the realm is the same as the account's home realm
                 bool IsInternalRealm;
-                std::string RealmNameActual; ///< the name of the realm
+                std::string RealmNameActual;     ///< the name of the realm
                 std::string RealmNameNormalized; ///< the name of the realm without spaces
             };
 
@@ -56,36 +57,35 @@ namespace WorldPackets
             void Write() override;
             std::string ToString() const override;
 
-            bool HasAccountInfo; ///< true if this packet contains account information. It is always false when Queued is true.
-            bool Queued; ///< true if the account is in the login queue. If true then QueuePos must be set
-            uint32 QueuePos; ///< position of the account in the login queue, it is only sent when Queued is true
-            uint32 BillingTimeRemaining; ///< the remaining game time that the account has in seconds. It is not currently implemented and probably won't ever be.
-            uint8 AccountExpansion; ///< the current expansion of this account, the possible values are in @ref Expansions
-            uint8 ActiveExpansion; ///< the current server expansion, the possible values are in @ref Expansions
-            uint32 BillingTimeRested; ///< affects the return value of the GetBillingTimeRested() client API call, it is the number of seconds you have left until the experience points and loot you receive from creatures and quests is reduced. It is only used in the Asia region in retail, it's not implemented in TC and will probably never be.
-            uint8 BillingPlanFlags; ///< controls the behavior of the client regarding billing, used in Asia realms, as they don't have monthly subscriptions, possible values are in @ref BillingPlanFlags. It is not currently implemented and will probably never be.
-            uint8 Response; ///< the result of the authentication process, it is AUTH_OK if it succeeded and the account is ready to log in. It can also be AUTH_WAIT_QUEUE if the account entered the login queue (Queued, QueuePos), possible values are @ref ResponseCodes
+            bool HasAccountInfo       = false; ///< true if this packet contains account information. It is always false when Queued is true.
+            bool Queued               = false; ///< true if the account is in the login queue. If true then QueuePos must be set
+            uint32 QueuePos               = 0; ///< position of the account in the login queue, it is only sent when Queued is true
+            uint32 BillingTimeRemaining   = 0; ///< the remaining game time that the account has in seconds. It is not currently implemented and probably won't ever be.
+            uint8 AccountExpansion        = 0; ///< the current expansion of this account, the possible values are in @ref Expansions
+            uint8 ActiveExpansion         = 0; ///< the current server expansion, the possible values are in @ref Expansions
+            uint32 BillingTimeRested      = 0; ///< affects the return value of the GetBillingTimeRested() client API call, it is the number of seconds you have left until the experience points and loot you receive from creatures and quests is reduced. It is only used in the Asia region in retail, it's not implemented in TC and will probably never be.
+            uint8 BillingPlanFlags        = 0; ///< controls the behavior of the client regarding billing, used in Asia realms, as they don't have monthly subscriptions, possible values are in @ref BillingPlanFlags. It is not currently implemented and will probably never be.
+            uint8 Response                = 0; ///< the result of the authentication process, it is AUTH_OK if it succeeded and the account is ready to log in. It can also be AUTH_WAIT_QUEUE if the account entered the login queue (Queued, QueuePos), possible values are @ref ResponseCodes
 
-            uint32 VirtualRealmAddress; ///< a special identifier made from the Index, BattleGroup and Region. @todo implement
-            uint32 RealmNamesCount; ///< the number of realms connected to this one (inclusive). @todo implement
-            uint32 TimeSecondsUntilPCKick; ///< @todo research
-            uint32 Races; ///< the number of races. @see RaceExpansions
-            uint32 Classes; ///< the number of classes. @see ClassExpansions
-            uint32 AccountCurrency; ///< this is probably used for the ingame shop. @todo implement
+            uint32 VirtualRealmAddress    = 0; ///< a special identifier made from the Index, BattleGroup and Region. @todo implement
+            uint32 RealmNamesCount        = 0; ///< the number of realms connected to this one (inclusive). @todo implement
+            uint32 TimeSecondsUntilPCKick = 0; ///< @todo research
+            uint32 AccountCurrency        = 0; ///< this is probably used for the ingame shop. @todo implement
 
-            std::list<RealmInfo> ConnectedRealms; ///< list of realms connected to this one (inclusive) @todo implement
+            std::list<RealmInfo> ConnectedRealms;            ///< list of realms connected to this one (inclusive) @todo implement
             std::list<CharacterTemplate> CharacterTemplates; ///< list of pre-made character templates. @todo implement
 
-            ExpansionRequirementContainer const& ClassExpansions; ///< the minimum AccountExpansion required to select the classes
-            ExpansionRequirementContainer const& RaceExpansions; ///< the minimum AccountExpansion required to select the races
+            ExpansionRequirementContainer const* ClassExpansions = nullptr; ///< the minimum AccountExpansion required to select the classes
+            ExpansionRequirementContainer const* RaceExpansions  = nullptr; ///< the minimum AccountExpansion required to select the races
 
-            bool Trial; ///< true if the account is a trial account.
-            bool ForceCharacterTemplate; ///< forces the client to always use a character template when creating a new character. @see Templates. @todo implement
-            uint16 NumPlayersHorde; ///< number of horde players in this realm. @todo implement
-            uint16 NumPlayersAlliance; ///< number of alliance players in this realm. @todo implement
-            bool IsVeteranTrial; ///< @todo research
-            bool HasFCM; ///< true if the account has a forced character migration pending. @todo implement
+            bool Trial                  = false; ///< true if the account is a trial account.
+            bool ForceCharacterTemplate = false; ///< forces the client to always use a character template when creating a new character. @see Templates. @todo implement
+            uint16 NumPlayersHorde          = 0; ///< number of horde players in this realm. @todo implement
+            uint16 NumPlayersAlliance       = 0; ///< number of alliance players in this realm. @todo implement
+            bool IsVeteranTrial         = false; ///< @todo research
+            bool HasFCM                 = false; ///< true if the account has a forced character migration pending. @todo implement
         };
     }
 }
+
 #endif

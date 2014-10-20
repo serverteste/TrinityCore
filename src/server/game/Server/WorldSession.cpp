@@ -689,27 +689,6 @@ void WorldSession::Handle_Deprecated(WorldPacket& recvPacket)
         , GetOpcodeNameForLogging(recvPacket.GetOpcode()).c_str(), GetPlayerInfo().c_str());
 }
 
-void WorldSession::SendAuthWaitQue(uint32 position)
-{
-    WorldPackets::AuthPackets::AuthResponse response;
-
-    if (position == 0)
-    {
-        response.Response = AUTH_OK;
-        response.HasAccountInfo = false;
-        response.Queued = false;
-    }
-    else
-    {
-        response.Queued = true;
-        response.HasAccountInfo = false;
-        response.QueuePos = position;
-        response.Response = AUTH_WAIT_QUEUE;
-    }
-
-    SendPacket(response);
-}
-
 void WorldSession::LoadGlobalAccountData()
 {
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_ACCOUNT_DATA);

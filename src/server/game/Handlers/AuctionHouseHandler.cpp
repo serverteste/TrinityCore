@@ -72,16 +72,13 @@ void WorldSession::SendAuctionHello(ObjectGuid guid, Creature* unit)
     SendPacket(&data);
 }
 
-void WorldSession::SendAuctionCommandResult(AuctionEntry* auction, uint32 action, uint32 errorCode, uint32 bidError)
+void WorldSession::SendAuctionCommandResult(AuctionEntry* auction, uint32 action, uint32 errorCode, uint32 /*bidError = 0*/)
 {
     WorldPackets::AuctionHousePackets::AuctionCommandResult auctionCommandResult;
 
-    auctionCommandResult.AuctionId = auction ? auction->Id : 0;
+    auctionCommandResult.InitializeAuction(auction);
     auctionCommandResult.Action = action;
     auctionCommandResult.ErrorCode = errorCode;
-    auctionCommandResult.Bid = auction->bid;
-    auctionCommandResult.AuctionOutBid = auction->GetAuctionOutBid();
-    auctionCommandResult.Bidder = auction->bidder;
 
     SendPacket(auctionCommandResult);
 }

@@ -71,6 +71,11 @@ namespace rbac
 class RBACData;
 }
 
+namespace WorldPackets
+{
+    class ServerPacket;
+}
+
 enum AccountDataType
 {
     GLOBAL_CONFIG_CACHE             = 0,                    // 0x01 g

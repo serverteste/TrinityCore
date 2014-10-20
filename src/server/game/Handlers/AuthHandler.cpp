@@ -23,10 +23,7 @@
 
 void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
 {
-    ExpansionRequirementContainer const& raceExpansions = sObjectMgr->GetRaceExpansionRequirements();
-    ExpansionRequirementContainer const& classExpansions = sObjectMgr->GetClassExpansionRequirements();
-
-    WorldPackets::AuthPackets::AuthResponse response(raceExpansions, classExpansions);
+    WorldPackets::AuthPackets::AuthResponse response;
     response.Response = code;
     response.Queued = queued;
     response.QueuePos = queuePos;
@@ -38,6 +35,30 @@ void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
 
     // Send current home realm. Also there is no need to send it later in realm queries.
     response.ConnectedRealms.emplace_back(realmHandle.Index, true, false, realmName, realmName);
+
+    response.ClassExpansions = &sObjectMgr->GetClassExpansionRequirements();
+    response.RaceExpansions = &sObjectMgr->GetRaceExpansionRequirements();
+
+    SendPacket(response);
+}
+
+void WorldSession::SendAuthWaitQue(uint32 position)
+{
+    WorldPackets::AuthPackets::AuthResponse response;
+
+    if (position == 0)
+    {
+        response.Response = AUTH_OK;
+        response.HasAccountInfo = false;
+        response.Queued = false;
+    }
+    else
+    {
+        response.Queued = true;
+        response.HasAccountInfo = false;
+        response.QueuePos = position;
+        response.Response = AUTH_WAIT_QUEUE;
+    }
 
     SendPacket(response);
 }

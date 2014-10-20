@@ -17,6 +17,7 @@
  */
 
 #include "WorldSocket.h"
+#include "AuthenticationPackets.h"
 #include "BigNumber.h"
 #include "Opcodes.h"
 #include "Player.h"
