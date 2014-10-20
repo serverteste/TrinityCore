@@ -1,0 +1,58 @@
+/*
+* Copyright (C) 2008-2014 TrinityCore <http://www.trinitycore.org/>
+*
+* This program is free software; you can redistribute it and/or modify it
+* under the terms of the GNU General Public License as published by the
+* Free Software Foundation; either version 2 of the License, or (at your
+* option) any later version.
+*
+* This program is distributed in the hope that it will be useful, but WITHOUT
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+* more details.
+*
+* You should have received a copy of the GNU General Public License along
+* with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include "AuctionHousePackets.h"
+#include "AuctionHouseMgr.h"
+
+WorldPackets::AuctionHousePackets::AuctionCommandResult::AuctionCommandResult() : ServerPacket(SMSG_AUCTION_COMMAND_RESULT, 4 + 4 + 4 + 8 + 4 + 8 + 8 + 8)
+{
+    AuctionId = 0;
+    Action = 0;
+    ErrorCode = 0;
+    Bid = 0;
+    BidError = 0;
+    Bidder = 0;
+    ActionOutBid = 0;
+}
+
+void WorldPackets::AuctionHousePackets::AuctionCommandResult::Write()
+{
+    _worldPacket << uint32(AuctionId);
+    _worldPacket << uint32(Action);
+    _worldPacket << uint32(ErrorCode);
+
+    switch (ErrorCode)
+    {
+        case ERR_AUCTION_OK:
+            if (Action == AUCTION_PLACE_BID)
+                _worldPacket << uint64(Bid);
+            break;
+        case ERR_AUCTION_INVENTORY:
+            _worldPacket << uint32(BidError);
+            break;
+        case ERR_AUCTION_HIGHER_BID:
+            _worldPacket << uint64(Bidder);
+            _worldPacket << uint64(Bid);
+            _worldPacket << uint64(ActionOutBid);
+            break;
+    }
+}
+
+std::string WorldPackets::AuctionHousePackets::AuctionCommandResult::ToString() const
+{
+    return "WorldPackets::AuctionHousePackets::AuctionCommandResult";
+}
