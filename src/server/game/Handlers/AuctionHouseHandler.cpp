@@ -72,7 +72,6 @@ void WorldSession::SendAuctionHello(ObjectGuid guid, Creature* unit)
     SendPacket(&data);
 }
 
-//call this method when player bids, creates, or deletes auction
 void WorldSession::SendAuctionCommandResult(AuctionEntry* auction, uint32 action, uint32 errorCode, uint32 bidError)
 {
     WorldPackets::AuctionHousePackets::AuctionCommandResult auctionCommandResult;
@@ -80,22 +79,9 @@ void WorldSession::SendAuctionCommandResult(AuctionEntry* auction, uint32 action
     auctionCommandResult.AuctionId = auction ? auction->Id : 0;
     auctionCommandResult.Action = action;
     auctionCommandResult.ErrorCode = errorCode;
-
-    switch (errorCode)
-    {
-        case ERR_AUCTION_OK:
-            if (action == AUCTION_PLACE_BID)
-                auctionCommandResult.Bid = auction->bid ? auction->GetAuctionOutBid() : 0;
-            break;
-        case ERR_AUCTION_INVENTORY:
-            auctionCommandResult.BidError = bidError;
-            break;
-        case ERR_AUCTION_HIGHER_BID:
-            auctionCommandResult.Bidder = auction->bidder;
-            auctionCommandResult.Bid = auction->bid;
-            auctionCommandResult.AuctionOutBid = auction->bid ? auction->GetAuctionOutBid() : 0;
-            break;
-    }
+    auctionCommandResult.Bid = auction->bid;
+    auctionCommandResult.AuctionOutBid = auction->GetAuctionOutBid();
+    auctionCommandResult.Bidder = auction->bidder;
 
     SendPacket(auctionCommandResult);
 }

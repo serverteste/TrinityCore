@@ -31,20 +31,13 @@ namespace WorldPackets
                 void Write() override;
                 std::string ToString() const override;
 
-                /* Id of the auction */
-                uint32 AuctionId;
-                /* enum AuctionAction { AUCTION_SELL_ITEM, AUCTION_CANCEL, AUCTION_PLACE_BID } */
-                uint32 Action;
-                /* enum AuctionError { ERR_AUCTION_OK, ERR_AUCTION_INVENTORY, ERR_AUCTION_DATABASE_ERROR, ERR_AUCTION_NOT_ENOUGHT_MONEY, ERR_AUCTION_ITEM_NOT_FOUND, ERR_AUCTION_HIGHER_BID, ERR_AUCTION_BID_INCREMENT, ERR_AUCTION_BID_OWN, ERR_AUCTION_RESTRICTED_ACCOUNT } */
-                uint32 ErrorCode;
-                /* Amount of money bid in copper */
-                uint64 Bid;
-                /* Enum AuctionError */
-                uint32 BidError;
-                /* LowGUID of the bidder */
-                uint64 Bidder;
-                /* The sum of outbid is (1% from current bid)*5, if bid is very small, it is 1c */
-                uint64 ActionOutBid;
+                uint32 AuctionId; ///< the id of the auction that triggered this notification
+                uint32 Action; ///< the type of action that triggered this notification. Possible values are @ref AuctionAction
+                uint32 ErrorCode; ///< the error code that was generated when trying to perform the action. Possible values are @ref AuctionError
+                uint64 Bid; ///< the amount of money that the player bid in copper
+                uint32 BidError; ///< the bid error. Possible values are @ref AuctionError
+                uint64 Bidder; ///< the GUID of the bidder for this auction.
+                uint64 AuctionOutBid; ///< the sum of outbid is (1% of current bid) * 5, if the bid is too small, then this value is 1 copper.
         };
     }
 }

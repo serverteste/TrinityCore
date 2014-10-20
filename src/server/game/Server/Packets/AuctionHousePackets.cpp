@@ -26,7 +26,7 @@ WorldPackets::AuctionHousePackets::AuctionCommandResult::AuctionCommandResult() 
     Bid = 0;
     BidError = 0;
     Bidder = 0;
-    ActionOutBid = 0;
+    AuctionOutBid = 0;
 }
 
 void WorldPackets::AuctionHousePackets::AuctionCommandResult::Write()
@@ -39,7 +39,7 @@ void WorldPackets::AuctionHousePackets::AuctionCommandResult::Write()
     {
         case ERR_AUCTION_OK:
             if (Action == AUCTION_PLACE_BID)
-                _worldPacket << uint64(Bid);
+                _worldPacket << Bid ? uint64(AuctionOutBid) : 0;
             break;
         case ERR_AUCTION_INVENTORY:
             _worldPacket << uint32(BidError);
@@ -47,7 +47,7 @@ void WorldPackets::AuctionHousePackets::AuctionCommandResult::Write()
         case ERR_AUCTION_HIGHER_BID:
             _worldPacket << uint64(Bidder);
             _worldPacket << uint64(Bid);
-            _worldPacket << uint64(ActionOutBid);
+            _worldPacket << Bid ? uint64(AuctionOutBid) : 0;
             break;
     }
 }
