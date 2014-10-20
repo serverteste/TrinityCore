@@ -21,6 +21,7 @@
 */
 
 #include "WorldSocket.h"
+#include "Packet.h"
 #include <zlib.h>
 #include "Config.h"
 #include "Common.h"
@@ -270,6 +271,11 @@ void WorldSession::SendPacket(WorldPacket* packet, bool forced /*= false*/)
     sScriptMgr->OnPacketSend(this, *packet);
 
     m_Socket->SendPacket(*packet);
+}
+
+void WorldSession::SendPacket(WorldPackets::ServerPacket const& packet)
+{
+    SendPacket(packet.GetWorldPacket());
 }
 
 /// Add an incoming packet to the queue
@@ -1156,11 +1162,6 @@ void WorldSession::InvalidateRBACData()
                    _RBACData->GetId(), _RBACData->GetName().c_str(), realmHandle.Index);
     delete _RBACData;
     _RBACData = NULL;
-}
-
-void WorldSession::SendPacket(WorldPackets::ServerPacket const& packet)
-{
-    // Send it here
 }
 
 bool WorldSession::DosProtection::EvaluateOpcode(WorldPacket& p, time_t time) const

@@ -75,7 +75,6 @@ void WorldSession::SendAuctionHello(ObjectGuid guid, Creature* unit)
 void WorldSession::SendAuctionCommandResult(AuctionEntry* auction, uint32 action, uint32 errorCode, uint32 /*bidError = 0*/)
 {
     WorldPackets::AuctionHousePackets::AuctionCommandResult auctionCommandResult;
-
     auctionCommandResult.InitializeAuction(auction);
     auctionCommandResult.Action = action;
     auctionCommandResult.ErrorCode = errorCode;

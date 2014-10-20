@@ -592,7 +592,7 @@ void WorldSocket::SendAuthResponseError(uint8 code)
     WorldPackets::AuthPackets::AuthResponse response;
     response.HasAccountInfo = false;
     response.Queued = false;
-    response.Response = code;
+    response.Result = code;
 
     _worldSession->SendPacket(response);
 }

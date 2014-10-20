@@ -34,6 +34,8 @@ namespace WorldPackets
 
         virtual std::string ToString() const = 0;
 
+        WorldPacket* GetWorldPacket() const { return &_worldPacket; }
+
     protected:
         WorldPacket& _worldPacket;
     };

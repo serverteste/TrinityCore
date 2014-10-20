@@ -22,26 +22,26 @@ WorldPackets::AuthPackets::AuthResponse::AuthResponse()
 
 void WorldPackets::AuthPackets::AuthResponse::Write()
 {
-    _worldPacket << Response;
-    _worldPacket.WriteBit(Response == AUTH_OK);
+    _worldPacket << uint8(Result);
+    _worldPacket.WriteBit(Result == AUTH_OK);
     _worldPacket.WriteBit(Queued);
 
-    if (Response == AUTH_OK)
+    if (Result == AUTH_OK)
     {
         _worldPacket << uint32(VirtualRealmAddress);
-        _worldPacket << uint32(ConnectedRealms.size());
-        _worldPacket << uint32(BillingTimeRemaining);
-        _worldPacket << uint32(BillingPlanFlags);
-        _worldPacket << uint32(BillingTimeRested);
-        _worldPacket << uint8(ActiveExpansion);
-        _worldPacket << uint8(AccountExpansion);
+        _worldPacket << uint32(VirtualRealms.size());
+        _worldPacket << uint32(TimeRemain);
+        _worldPacket << uint32(TimeOptions);
+        _worldPacket << uint32(TimeRested);
+        _worldPacket << uint8(ActiveExpansionLevel);
+        _worldPacket << uint8(AccountExpansionLevel);
         _worldPacket << uint32(TimeSecondsUntilPCKick);
-        _worldPacket << uint32(RaceExpansions->size());
-        _worldPacket << uint32(ClassExpansions->size());
-        _worldPacket << uint32(CharacterTemplates.size());
-        _worldPacket << uint32(AccountCurrency);
+        _worldPacket << uint32(AvailableRaces->size());
+        _worldPacket << uint32(AvailableClasses->size());
+        _worldPacket << uint32(Templates.size());
+        _worldPacket << uint32(CurrencyID);
 
-        for (auto& realm : ConnectedRealms)
+        for (auto& realm : VirtualRealms)
         {
             _worldPacket << uint32(realm.RealmId);
             _worldPacket.WriteBit(realm.IsHomeRealm);
@@ -52,19 +52,19 @@ void WorldPackets::AuthPackets::AuthResponse::Write()
             _worldPacket.WriteString(realm.RealmNameNormalized);
         }
 
-        for (auto& race : *RaceExpansions)
+        for (auto& race : *AvailableRaces)
         {
             _worldPacket << uint8(race.first); /// the current race
             _worldPacket << uint8(race.second); /// the required Expansion
         }
 
-        for (auto& klass : *ClassExpansions)
+        for (auto& klass : *AvailableClasses)
         {
             _worldPacket << uint8(klass.first); /// the current class
             _worldPacket << uint8(klass.second); /// the required Expansion
         }
 
-        for (auto& templat : CharacterTemplates)
+        for (auto& templat : Templates)
         {
             _worldPacket << uint32(templat.TemplateSetId);
             _worldPacket << uint32(templat.TemplateClasses.size());
@@ -83,7 +83,7 @@ void WorldPackets::AuthPackets::AuthResponse::Write()
 
         _worldPacket.FlushBits();
 
-        _worldPacket.WriteBit(Trial);
+        _worldPacket.WriteBit(IsExpansionTrial);
         _worldPacket.WriteBit(ForceCharacterTemplate);
         _worldPacket.WriteBit(NumPlayersHorde != 0);
         _worldPacket.WriteBit(NumPlayersAlliance != 0);
@@ -98,7 +98,7 @@ void WorldPackets::AuthPackets::AuthResponse::Write()
 
     if (Queued)
     {
-        _worldPacket << uint32(QueuePos);
+        _worldPacket << uint32(WaitCount);
         _worldPacket.WriteBit(HasFCM);
     }
 

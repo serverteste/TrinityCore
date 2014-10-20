@@ -24,20 +24,20 @@
 void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
 {
     WorldPackets::AuthPackets::AuthResponse response;
-    response.Response = code;
+    response.Result = code;
     response.Queued = queued;
-    response.QueuePos = queuePos;
-    response.AccountExpansion = Expansion();
-    response.ActiveExpansion = Expansion();
+    response.WaitCount = queuePos;
+    response.AccountExpansionLevel = Expansion();
+    response.ActiveExpansionLevel = Expansion();
     response.VirtualRealmAddress = realmHandle.Index;
 
     std::string realmName = sObjectMgr->GetRealmName(realmHandle.Index);
 
     // Send current home realm. Also there is no need to send it later in realm queries.
-    response.ConnectedRealms.emplace_back(realmHandle.Index, true, false, realmName, realmName);
+    response.VirtualRealms.emplace_back(realmHandle.Index, true, false, realmName, realmName);
 
-    response.ClassExpansions = &sObjectMgr->GetClassExpansionRequirements();
-    response.RaceExpansions = &sObjectMgr->GetRaceExpansionRequirements();
+    response.AvailableClasses = &sObjectMgr->GetClassExpansionRequirements();
+    response.AvailableRaces = &sObjectMgr->GetRaceExpansionRequirements();
 
     SendPacket(response);
 }
@@ -48,7 +48,7 @@ void WorldSession::SendAuthWaitQue(uint32 position)
 
     if (position == 0)
     {
-        response.Response = AUTH_OK;
+        response.Result = AUTH_OK;
         response.HasAccountInfo = false;
         response.Queued = false;
     }
@@ -56,8 +56,8 @@ void WorldSession::SendAuthWaitQue(uint32 position)
     {
         response.Queued = true;
         response.HasAccountInfo = false;
-        response.QueuePos = position;
-        response.Response = AUTH_WAIT_QUEUE;
+        response.WaitCount = position;
+        response.Result = AUTH_WAIT_QUEUE;
     }
 
     SendPacket(response);
