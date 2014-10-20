@@ -36,7 +36,7 @@ namespace WorldPackets
             bool Unknown1; ///< unknown value @todo implement
             uint32 Unknown2; ///< unknown value @todo implement
             uint32 QueuePos; ///< position of the account in the login queue, it is only sent when Queued is true
-            uint32 BillingTimeRemaining; ///< the remaining game time that the account has in minutes. It is not currently implemented and probably won't ever be.
+            uint32 BillingTimeRemaining; ///< the remaining game time that the account has in seconds. It is not currently implemented and probably won't ever be.
             uint8 Expansion; ///< the current expansion of this account, the possible values are in @ref Expansions
             uint32 BillingTimeRested; ///< affects the return value of the GetBillingTimeRested() client API call, it is the number of seconds you have left until the experience points and loot you receive from creatures and quests is reduced. It is only used in the Asia region in retail, it's not implemented in TC and will probably never be.
             uint8 BillingPlanFlags; ///< controls the behavior of the client regarding billing, used in Asia realms, as they don't have monthly subscriptions, possible values are in @ref BillingPlanFlags. It is not currently implemented and will probably never be.
