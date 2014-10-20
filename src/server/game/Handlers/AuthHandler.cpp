@@ -37,7 +37,7 @@ void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
     std::string realmName = sObjectMgr->GetRealmName(realmHandle.Index);
 
     // Send current home realm. Also there is no need to send it later in realm queries.
-    response.ConnectedRealms.emplace_back({realmHandle.Index, true, false, realmName, realmName});
+    response.ConnectedRealms.emplace_back(realmHandle.Index, true, false, realmName, realmName);
 
     SendPacket(response);
 }
