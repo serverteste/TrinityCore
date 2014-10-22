@@ -57,9 +57,7 @@ GameObject::GameObject() : WorldObject(false), MapObject(),
     m_DBTableGuid = 0;
     m_rotation = 0;
 
-    m_lootRecipientGroup = 0;
     m_groupLootTimer = 0;
-    lootingGroupLowGUID = 0;
 
     ResetLootMode(); // restore default loot mode
     m_stationaryPosition.Relocate(0.0f, 0.0f, 0.0f, 0.0f);
@@ -117,8 +115,8 @@ void GameObject::RemoveFromOwner()
         return;
     }
 
-    TC_LOG_FATAL("misc", "Removed GameObject (GUID: %u Entry: %u SpellId: %u LinkedGO: %u) that just lost any reference to the owner (%s) GO list",
-        GetGUIDLow(), GetGOInfo()->entry, m_spellId, GetGOInfo()->GetLinkedGameObjectEntry(), ownerGUID.ToString().c_str());
+    TC_LOG_FATAL("misc", "Removed GameObject (%s SpellId: %u LinkedGO: %u) that just lost any reference to the owner (%s) GO list",
+        GetGUID().ToString().c_str(), m_spellId, GetGOInfo()->GetLinkedGameObjectEntry(), ownerGUID.ToString().c_str());
     SetOwnerGUID(ObjectGuid::Empty);
 }
 
@@ -560,13 +558,14 @@ void GameObject::Update(uint32 diff)
                     {
                         if (m_groupLootTimer <= diff)
                         {
-                            Group* group = sGroupMgr->GetGroupByGUID(lootingGroupLowGUID);
-                            if (group)
+                            if (Group* group = sGroupMgr->GetGroupByGUID(lootingGroupLowGUID))
                                 group->EndRoll(&loot);
+
                             m_groupLootTimer = 0;
-                            lootingGroupLowGUID = 0;
+                            lootingGroupLowGUID.Clear();
                         }
-                        else m_groupLootTimer -= diff;
+                        else
+                            m_groupLootTimer -= diff;
                     }
                     break;
                 case GAMEOBJECT_TYPE_TRAP:
@@ -634,7 +633,7 @@ void GameObject::Update(uint32 diff)
 
             //! If this is summoned by a spell with ie. SPELL_EFFECT_SUMMON_OBJECT_WILD, with or without owner, we check respawn criteria based on spell
             //! The GetOwnerGUID() check is mostly for compatibility with hacky scripts - 99% of the time summoning should be done trough spells.
-            if (GetSpellId() || GetOwnerGUID())
+            if (GetSpellId() || !GetOwnerGUID().IsEmpty())
             {
                 SetRespawnTime(0);
                 Delete();
@@ -770,7 +769,8 @@ void GameObject::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
         return;
 
     if (!m_DBTableGuid)
-        m_DBTableGuid = GetGUIDLow();
+        m_DBTableGuid = GetGUID().GetCounter();
+
     // update in loaded data (changing data only in this place)
     GameObjectData& data = sObjectMgr->NewGOData(m_DBTableGuid);
 
@@ -1011,9 +1011,9 @@ bool GameObject::IsAlwaysVisibleFor(WorldObject const* seer) const
         return false;
 
     // Always seen by owner and friendly units
-    if (ObjectGuid guid = GetOwnerGUID())
+    if (!GetOwnerGUID().IsEmpty())
     {
-        if (seer->GetGUID() == guid)
+        if (seer->GetGUID() == GetOwnerGUID())
             return true;
 
         Unit* owner = GetOwner();
@@ -1298,7 +1298,7 @@ void GameObject::Use(Unit* user)
                 float x_i = GetPositionX() + relativeDistance * std::cos(orthogonalOrientation);
                 float y_i = GetPositionY() + relativeDistance * std::sin(orthogonalOrientation);
 
-                if (itr->second)
+                if (!itr->second.IsEmpty())
                 {
                     if (Player* ChairUser = ObjectAccessor::FindPlayer(itr->second))
                     {
@@ -1509,7 +1509,7 @@ void GameObject::Use(Unit* user)
             GameObjectTemplate const* info = GetGOInfo();
 
             Player* m_ritualOwner = NULL;
-            if (m_ritualOwnerGUID)
+            if (!m_ritualOwnerGUID.IsEmpty())
                 m_ritualOwner = ObjectAccessor::FindPlayer(m_ritualOwnerGUID);
 
             // ritual owner is set for GO's without owner (not summoned)
@@ -1765,8 +1765,8 @@ void GameObject::Use(Unit* user)
         }
         default:
             if (GetGoType() >= MAX_GAMEOBJECT_TYPE)
-                TC_LOG_ERROR("misc", "GameObject::Use(): unit (type: %u, guid: %u, name: %s) tries to use object (guid: %u, entry: %u, name: %s) of unknown type (%u)",
-                    user->GetTypeId(), user->GetGUIDLow(), user->GetName().c_str(), GetGUIDLow(), GetEntry(), GetGOInfo()->name.c_str(), GetGoType());
+                TC_LOG_ERROR("misc", "GameObject::Use(): unit (type: %u, %s, name: %s) tries to use object (%s, name: %s) of unknown type (%u)",
+                    user->GetTypeId(), user->GetGUID().ToString().c_str(), user->GetName().c_str(), GetGUID().ToString().c_str(), GetGOInfo()->name.c_str(), GetGoType());
             break;
     }
 
@@ -2204,7 +2204,7 @@ void GameObject::SetLootRecipient(Unit* unit)
     if (!unit)
     {
         m_lootRecipient.Clear();
-        m_lootRecipientGroup = 0;
+        m_lootRecipientGroup.Clear();
         return;
     }
 
@@ -2217,7 +2217,7 @@ void GameObject::SetLootRecipient(Unit* unit)
 
     m_lootRecipient = player->GetGUID();
     if (Group* group = player->GetGroup())
-        m_lootRecipientGroup = group->GetLowGUID();
+        m_lootRecipientGroup = group->GetGUID();
 }
 
 bool GameObject::IsLootAllowedFor(Player const* player) const

@@ -483,7 +483,7 @@ void Battlefield::ShowNpc(Creature* creature, bool aggressive)
 Group* Battlefield::GetFreeBfRaid(TeamId TeamId)
 {
     for (GuidSet::const_iterator itr = m_Groups[TeamId].begin(); itr != m_Groups[TeamId].end(); ++itr)
-        if (Group* group = sGroupMgr->GetGroupByGUID(itr->GetCounter()))
+        if (Group* group = sGroupMgr->GetGroupByGUID(*itr))
             if (!group->IsFull())
                 return group;
 
@@ -493,7 +493,7 @@ Group* Battlefield::GetFreeBfRaid(TeamId TeamId)
 Group* Battlefield::GetGroupPlayer(ObjectGuid guid, TeamId TeamId)
 {
     for (GuidSet::const_iterator itr = m_Groups[TeamId].begin(); itr != m_Groups[TeamId].end(); ++itr)
-        if (Group* group = sGroupMgr->GetGroupByGUID(itr->GetCounter()))
+        if (Group* group = sGroupMgr->GetGroupByGUID(*itr))
             if (group->IsMember(guid))
                 return group;
 
@@ -850,7 +850,7 @@ BfCapturePoint::BfCapturePoint(Battlefield* battlefield) : m_Bf(battlefield), m_
 
 bool BfCapturePoint::HandlePlayerEnter(Player* player)
 {
-    if (m_capturePointGUID)
+    if (!m_capturePointGUID.IsEmpty())
     {
         if (GameObject* capturePoint = m_Bf->GetGameObject(m_capturePointGUID))
         {
@@ -865,7 +865,7 @@ bool BfCapturePoint::HandlePlayerEnter(Player* player)
 
 GuidSet::iterator BfCapturePoint::HandlePlayerLeave(Player* player)
 {
-    if (m_capturePointGUID)
+    if (!m_capturePointGUID.IsEmpty())
         if (GameObject* capturePoint = m_Bf->GetGameObject(m_capturePointGUID))
             player->SendUpdateWorldState(capturePoint->GetGOInfo()->capturePoint.worldState1, 0);
 
@@ -900,7 +900,7 @@ bool BfCapturePoint::SetCapturePointData(GameObject* capturePoint)
 
     TC_LOG_DEBUG("bg.battlefield", "Creating capture point %u", capturePoint->GetEntry());
 
-    m_capturePointGUID = ObjectGuid(HIGHGUID_GAMEOBJECT, capturePoint->GetEntry(), capturePoint->GetGUIDLow());
+    m_capturePointGUID = capturePoint->GetGUID();
 
     // check info existence
     GameObjectTemplate const* goinfo = capturePoint->GetGOInfo();
@@ -937,7 +937,7 @@ GameObject* BfCapturePoint::GetCapturePointGo()
 
 bool BfCapturePoint::DelCapturePoint()
 {
-    if (m_capturePointGUID)
+    if (!m_capturePointGUID.IsEmpty())
     {
         if (GameObject* capturePoint = m_Bf->GetGameObject(m_capturePointGUID))
         {

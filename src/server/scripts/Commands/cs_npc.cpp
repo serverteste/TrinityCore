@@ -690,7 +690,7 @@ public:
 
         creature->AI()->SetData(data_1, data_2);
         std::string AIorScript = !creature->GetAIName().empty() ? "AI type: " + creature->GetAIName() : (!creature->GetScriptName().empty() ? "Script Name: " + creature->GetScriptName() : "No AI or Script Name Set");
-        handler->PSendSysMessage(LANG_NPC_SETDATA, creature->GetGUID().GetCounter(), creature->GetEntry(), creature->GetName().c_str(), data_1, data_2, AIorScript.c_str());
+        handler->PSendSysMessage(LANG_NPC_SETDATA, creature->GetGUID().ToString().c_str(), creature->GetName().c_str(), data_1, data_2, AIorScript.c_str());
         return true;
     }
 
@@ -1396,7 +1396,7 @@ public:
 
         Player* player = handler->GetSession()->GetPlayer();
 
-        if (player->GetPetGUID())
+        if (!player->GetPetGUID().IsEmpty())
         {
             handler->SendSysMessage (LANG_YOU_ALREADY_HAVE_PET);
             handler->SetSentErrorMessage (true);
@@ -1520,7 +1520,7 @@ public:
 
         if (!creature->GetDBTableGUIDLow())
         {
-            handler->PSendSysMessage("Selected creature %u isn't in creature table", creature->GetGUIDLow());
+            handler->PSendSysMessage("Selected %s isn't in creature table", creature->GetGUID().ToString().c_str());
             handler->SetSentErrorMessage(true);
             return false;
         }

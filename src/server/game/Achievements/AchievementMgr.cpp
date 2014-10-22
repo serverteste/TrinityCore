@@ -868,7 +868,7 @@ void AchievementMgr<T>::SendAchievementEarned(AchievementEntry const* achievemen
         // broadcast realm first reached
         WorldPacket data(SMSG_SERVER_FIRST_ACHIEVEMENT, GetOwner()->GetName().size() + 1 + 8 + 4 + 4);
         data << GetOwner()->GetName();
-        data << uint64(GetOwner()->GetGUID());
+        data << GetOwner()->GetGUID();
         data << uint32(achievement->ID);
         data << uint32(0);                                  // 1=link supplied string as player name, 0=display plain string
         sWorld->SendGlobalMessage(&data);
@@ -1911,8 +1911,8 @@ void AchievementMgr<Player>::CompletedAchievement(AchievementEntry const* achiev
     if (!GetOwner()->GetSession()->PlayerLoading())
         SendAchievementEarned(achievement);
 
-    TC_LOG_INFO("achievement", "AchievementMgr::CompletedAchievement(%u). Player: %s (%u)",
-        achievement->ID, GetOwner()->GetName().c_str(), GetOwner()->GetGUIDLow());
+    TC_LOG_INFO("achievement", "AchievementMgr::CompletedAchievement(%u). %s %s",
+        achievement->ID, GetOwner()->GetGUID().ToString().c_str(), GetOwner()->GetName().c_str());
 
     CompletedAchievementData& ca = m_completedAchievements[achievement->ID];
     ca.date = time(NULL);

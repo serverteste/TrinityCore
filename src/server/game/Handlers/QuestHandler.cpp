@@ -125,7 +125,7 @@ void WorldSession::HandleQuestgiverAcceptQuestOpcode(WorldPacket& recvData)
 
     if (Player* playerQuestObject = object->ToPlayer())
     {
-        if ((_player->GetDivider() && _player->GetDivider() != guid) ||
+        if ((!_player->GetDivider().IsEmpty() && _player->GetDivider() != guid) ||
            ((object != _player && !playerQuestObject->CanShareQuest(questId))))
         {
             CLOSE_GOSSIP_CLEAR_DIVIDER();
@@ -595,7 +595,7 @@ void WorldSession::HandlePushQuestToParty(WorldPacket& recvPacket)
             continue;
         }
 
-        if (receiver->GetDivider())
+        if (!receiver->GetDivider().IsEmpty())
         {
             sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_BUSY);
             continue;
@@ -625,13 +625,13 @@ void WorldSession::HandleQuestPushResult(WorldPacket& recvPacket)
 
     TC_LOG_DEBUG("network", "WORLD: Received MSG_QUEST_PUSH_RESULT");
 
-    if (_player->GetDivider() && _player->GetDivider() == guid)
+    if (!_player->GetDivider().IsEmpty() && _player->GetDivider() == guid)
     {
         Player* player = ObjectAccessor::FindPlayer(_player->GetDivider());
         if (player)
         {
             WorldPacket data(MSG_QUEST_PUSH_RESULT, 8 + 4 + 1);
-            data << uint64(_player->GetGUID());
+            data << _player->GetGUID();
             data << uint8(msg);                             // valid values: 0-8
             player->SendDirectMessage(&data);
             _player->SetDivider(ObjectGuid::Empty);
@@ -663,7 +663,7 @@ void WorldSession::HandleQuestgiverStatusMultipleQuery(WorldPacket& /*recvPacket
 
             questStatus = _player->GetQuestDialogStatus(questgiver);
 
-            data << uint64(questgiver->GetGUID());
+            data << questgiver->GetGUID();
             data << uint32(questStatus);
             ++count;
         }
@@ -675,7 +675,7 @@ void WorldSession::HandleQuestgiverStatusMultipleQuery(WorldPacket& /*recvPacket
 
             questStatus = _player->GetQuestDialogStatus(questgiver);
 
-            data << uint64(questgiver->GetGUID());
+            data << questgiver->GetGUID();
             data << uint32(questStatus);
             ++count;
         }

@@ -138,7 +138,7 @@ public:
         if (*args)
         {
             ObjectGuid guid = handler->extractGuidFromLink((char*)args);
-            if (guid)
+            if (!guid.IsEmpty())
                 object = (WorldObject*)ObjectAccessor::GetObjectByTypeMask(*handler->GetSession()->GetPlayer(), guid, TYPEMASK_UNIT | TYPEMASK_GAMEOBJECT);
 
             if (!object)
@@ -611,7 +611,7 @@ public:
             return false;
         }
 
-        handler->PSendSysMessage(LANG_OBJECT_GUID, guid.GetCounter(), guid.GetHigh());
+        handler->PSendSysMessage(LANG_OBJECT_GUID, guid.ToString().c_str());
         return true;
     }
 
@@ -709,7 +709,7 @@ public:
         if (*args)
         {
             ObjectGuid guid = handler->extractGuidFromLink((char*)args);
-            if (guid)
+            if (!guid.IsEmpty())
                 obj = (WorldObject*)ObjectAccessor::GetObjectByTypeMask(*handler->GetSession()->GetPlayer(), guid, TYPEMASK_UNIT|TYPEMASK_GAMEOBJECT);
 
             if (!obj)
@@ -1650,7 +1650,7 @@ public:
 
         // Initiate output
         // Output I. LANG_PINFO_PLAYER
-        handler->PSendSysMessage(LANG_PINFO_PLAYER, target ? "" : handler->GetTrinityString(LANG_OFFLINE), nameLink.c_str(), lowguid);
+        handler->PSendSysMessage(LANG_PINFO_PLAYER, target ? "" : handler->GetTrinityString(LANG_OFFLINE), nameLink.c_str(), targetGuid.ToString().c_str());
 
         // Output II. LANG_PINFO_GM_ACTIVE if character is gamemaster
         if (target && target->IsGameMaster())
@@ -1766,7 +1766,7 @@ public:
         Player* player = handler->GetSession()->GetPlayer();
 
         // accept only explicitly selected target (not implicitly self targeting case)
-        Creature* target = player->GetTarget() ? handler->getSelectedCreature() : nullptr;
+        Creature* target = !player->GetTarget().IsEmpty() ? handler->getSelectedCreature() : nullptr;
         if (target)
         {
             if (target->IsPet())
@@ -2519,7 +2519,7 @@ public:
 
         WorldPacket data(SMSG_PLAY_SOUND, 4 + 8);
         data << uint32(soundId);
-        data << uint64(handler->GetSession()->GetPlayer()->GetGUID());
+        data << handler->GetSession()->GetPlayer()->GetGUID();
         sWorld->SendGlobalMessage(&data);
 
         handler->PSendSysMessage(LANG_COMMAND_PLAYED_TO_ALL, soundId);

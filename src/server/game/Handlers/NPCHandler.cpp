@@ -298,15 +298,15 @@ void WorldSession::HandleTrainerBuySpellOpcode(WorldPacket& recvData)
         _player->LearnSpell(spellId, false);
 
     WorldPacket data(SMSG_TRAINER_BUY_SUCCEEDED, 12);
-    data << uint64(guid);
+    data << guid;
     data << uint32(spellId);
     SendPacket(&data);
 }
 
-void WorldSession::SendTrainerBuyFailed(uint64 guid, uint32 spellId, uint32 reason)
+void WorldSession::SendTrainerBuyFailed(ObjectGuid guid, uint32 spellId, uint32 reason)
 {
     WorldPacket data(SMSG_TRAINER_BUY_FAILED, 16);
-    data << uint64(guid);
+    data << guid;
     data << uint32(spellId);        // should be same as in packet from client
     data << uint32(reason);         // 1 == "Not enough money for trainer service." 0 == "Trainer service %d unavailable."
     SendPacket(&data);
@@ -487,7 +487,7 @@ void WorldSession::SendBindPoint(Creature* npc)
     npc->CastSpell(_player, bindspell, true);
 
     WorldPacket data(SMSG_TRAINER_BUY_SUCCEEDED, 12);
-    data << uint64(npc->GetGUID());
+    data << npc->GetGUID();
     data << uint32(bindspell);
     SendPacket(&data);
 
@@ -536,7 +536,7 @@ void WorldSession::SendStablePetCallback(PreparedQueryResult result, ObjectGuid 
 
     WorldPacket data(MSG_LIST_STABLED_PETS, 200);           // guess size
 
-    data << uint64(guid);
+    data << guid;
 
     Pet* pet = _player->GetPet();
 
@@ -899,7 +899,7 @@ void WorldSession::HandleRepairItemOpcode(WorldPacket& recvData)
     // reputation discount
     float discountMod = _player->GetReputationPriceDiscount(unit);
 
-    if (itemGUID)
+    if (!itemGUID.IsEmpty())
     {
         TC_LOG_DEBUG("network", "ITEM: Repair %s, at %s", itemGUID.ToString().c_str(), npcGUID.ToString().c_str());
 

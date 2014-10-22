@@ -142,8 +142,8 @@ bool ForcedDespawnDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
 }
 
 Creature::Creature(bool isWorldObject): Unit(isWorldObject), MapObject(),
-m_groupLootTimer(0), lootingGroupLowGUID(0), m_PlayerDamageReq(0),
-m_lootRecipient(), m_lootRecipientGroup(0), _skinner(), _pickpocketLootRestore(0), m_corpseRemoveTime(0), m_respawnTime(0),
+m_groupLootTimer(0), m_PlayerDamageReq(0),
+_pickpocketLootRestore(0), m_corpseRemoveTime(0), m_respawnTime(0),
 m_respawnDelay(300), m_corpseDelay(60), m_respawnradius(0.0f), m_reactState(REACT_AGGRESSIVE),
 m_defaultMovementType(IDLE_MOTION_TYPE), m_DBTableGuid(0), m_equipmentId(0), m_originalEquipmentId(0), m_AlreadyCallAssistance(false),
 m_AlreadySearchedAssistance(false), m_regenHealth(true), m_AI_locked(false), m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL),
@@ -456,11 +456,11 @@ void Creature::Update(uint32 diff)
     {
         case JUST_RESPAWNED:
             // Must not be called, see Creature::setDeathState JUST_RESPAWNED -> ALIVE promoting.
-            TC_LOG_ERROR("entities.unit", "Creature (GUID: %u Entry: %u) in wrong state: JUST_RESPAWNED (4)", GetGUIDLow(), GetEntry());
+            TC_LOG_ERROR("entities.unit", "Creature (%s) in wrong state: JUST_RESPAWNED (4)", GetGUID().ToString().c_str());
             break;
         case JUST_DIED:
             // Must not be called, see Creature::setDeathState JUST_DIED -> CORPSE promoting.
-            TC_LOG_ERROR("entities.unit", "Creature (GUID: %u Entry: %u) in wrong state: JUST_DEAD (1)", GetGUIDLow(), GetEntry());
+            TC_LOG_ERROR("entities.unit", "Creature (%s) in wrong state: JUST_DEAD (1)", GetGUID().ToString().c_str());
             break;
         case DEAD:
         {
@@ -494,17 +494,18 @@ void Creature::Update(uint32 diff)
             if (m_deathState != CORPSE)
                 break;
 
-            if (m_groupLootTimer && lootingGroupLowGUID)
+            if (m_groupLootTimer && !lootingGroupLowGUID.IsEmpty())
             {
                 if (m_groupLootTimer <= diff)
                 {
-                    Group* group = sGroupMgr->GetGroupByGUID(lootingGroupLowGUID);
-                    if (group)
+                    if (Group* group = sGroupMgr->GetGroupByGUID(lootingGroupLowGUID))
                         group->EndRoll(&loot);
+
                     m_groupLootTimer = 0;
-                    lootingGroupLowGUID = 0;
+                    lootingGroupLowGUID.Clear();
                 }
-                else m_groupLootTimer -= diff;
+                else
+                    m_groupLootTimer -= diff;
             }
             else if (m_corpseRemoveTime <= time(NULL))
             {
@@ -528,7 +529,7 @@ void Creature::Update(uint32 diff)
                 UpdateCharmAI();
                 NeedChangeAI = false;
                 IsAIEnabled = true;
-                if (!IsInEvadeMode() && LastCharmerGUID)
+                if (!IsInEvadeMode() && !LastCharmerGUID.IsEmpty())
                     if (Unit* charmer = ObjectAccessor::GetUnit(*this, LastCharmerGUID))
                         i_AI->AttackStart(charmer);
 
@@ -603,7 +604,7 @@ void Creature::RegenerateMana()
     uint32 addvalue = 0;
 
     // Combat and any controlled creature
-    if (IsInCombat() || GetCharmerOrOwnerGUID())
+    if (IsInCombat() || !GetCharmerOrOwnerGUID().IsEmpty())
     {
         float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
         float Spirit = GetStat(STAT_SPIRIT);
@@ -638,7 +639,7 @@ void Creature::RegenerateHealth()
     uint32 addvalue = 0;
 
     // Not only pet, but any controlled creature
-    if (GetCharmerOrOwnerGUID())
+    if (!GetCharmerOrOwnerGUID().IsEmpty())
     {
         float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
         float Spirit = GetStat(STAT_SPIRIT);
@@ -875,13 +876,15 @@ Player* Creature::GetLootRecipient() const
 {
     if (!m_lootRecipient)
         return NULL;
+
     return ObjectAccessor::FindConnectedPlayer(m_lootRecipient);
 }
 
 Group* Creature::GetLootRecipientGroup() const
 {
-    if (!m_lootRecipientGroup)
+    if (m_lootRecipientGroup.IsEmpty())
         return NULL;
+
     return sGroupMgr->GetGroupByGUID(m_lootRecipientGroup);
 }
 
@@ -894,7 +897,7 @@ void Creature::SetLootRecipient(Unit* unit)
     if (!unit)
     {
         m_lootRecipient.Clear();
-        m_lootRecipientGroup = 0;
+        m_lootRecipientGroup.Clear();
         RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE|UNIT_DYNFLAG_TAPPED);
         return;
     }
@@ -908,7 +911,7 @@ void Creature::SetLootRecipient(Unit* unit)
 
     m_lootRecipient = player->GetGUID();
     if (Group* group = player->GetGroup())
-        m_lootRecipientGroup = group->GetLowGUID();
+        m_lootRecipientGroup = group->GetGUID();
 
     SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_TAPPED);
 }
@@ -945,7 +948,8 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
 {
     // update in loaded data
     if (!m_DBTableGuid)
-        m_DBTableGuid = GetGUIDLow();
+        m_DBTableGuid = GetGUID().GetCounter();
+
     CreatureData& data = sObjectMgr->NewOrExistCreatureData(m_DBTableGuid);
 
     uint32 displayId = GetNativeDisplayId();
@@ -1338,7 +1342,7 @@ void Creature::DeleteFromDB()
 {
     if (!m_DBTableGuid)
     {
-        TC_LOG_ERROR("entities.unit", "Trying to delete not saved creature! LowGUID: %u, Entry: %u", GetGUIDLow(), GetEntry());
+        TC_LOG_ERROR("entities.unit", "Trying to delete not saved %s!", GetGUID().ToString().c_str());
         return;
     }
 
@@ -1787,7 +1791,7 @@ Unit* Creature::SelectNearestTargetInAttackDistance(float dist) const
 
     if (dist > MAX_VISIBILITY_DISTANCE)
     {
-        TC_LOG_ERROR("entities.unit", "Creature (GUID: %u Entry: %u) SelectNearestTargetInAttackDistance called with dist > MAX_VISIBILITY_DISTANCE. Distance set to ATTACK_DISTANCE.", GetGUIDLow(), GetEntry());
+        TC_LOG_ERROR("entities.unit", "Creature (%s) SelectNearestTargetInAttackDistance called with dist > MAX_VISIBILITY_DISTANCE. Distance set to ATTACK_DISTANCE.", GetGUID().ToString().c_str());
         dist = ATTACK_DISTANCE;
     }
 
@@ -1820,7 +1824,7 @@ void Creature::SendAIReaction(AiReaction reactionType)
 {
     WorldPacket data(SMSG_AI_REACTION, 12);
 
-    data << uint64(GetGUID());
+    data << GetGUID();
     data << uint32(reactionType);
 
     ((WorldObject*)this)->SendMessageToSet(&data, true);
@@ -1910,7 +1914,7 @@ bool Creature::CanAssistTo(const Unit* u, const Unit* enemy, bool checkfaction /
         return false;
 
     // only free creature
-    if (GetCharmerOrOwnerGUID())
+    if (!GetCharmerOrOwnerGUID().IsEmpty())
         return false;
 
     // only from same creature faction
@@ -2076,7 +2080,7 @@ bool Creature::LoadCreaturesAddon(bool reload)
             SpellInfo const* AdditionalSpellInfo = sSpellMgr->GetSpellInfo(*itr);
             if (!AdditionalSpellInfo)
             {
-                TC_LOG_ERROR("sql.sql", "Creature (GUID: %u Entry: %u) has wrong spell %u defined in `auras` field.", GetGUIDLow(), GetEntry(), *itr);
+                TC_LOG_ERROR("sql.sql", "Creature (%s) has wrong spell %u defined in `auras` field.", GetGUID().ToString().c_str(), *itr);
                 continue;
             }
 
@@ -2090,7 +2094,7 @@ bool Creature::LoadCreaturesAddon(bool reload)
             }
 
             AddAura(*itr, this);
-            TC_LOG_DEBUG("entities.unit", "Spell: %u added to creature (GUID: %u Entry: %u)", *itr, GetGUIDLow(), GetEntry());
+            TC_LOG_DEBUG("entities.unit", "Spell: %u added to creature (%s)", *itr, GetGUID().ToString().c_str());
         }
     }
 

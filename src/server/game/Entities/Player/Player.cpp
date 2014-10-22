@@ -305,7 +305,7 @@ TradeData* TradeData::GetTraderData() const
 
 Item* TradeData::GetItem(TradeSlots slot) const
 {
-    return m_items[slot] ? m_player->GetItemByGuid(m_items[slot]) : NULL;
+    return !m_items[slot].IsEmpty() ? m_player->GetItemByGuid(m_items[slot]) : NULL;
 }
 
 bool TradeData::HasItem(ObjectGuid itemGuid) const
@@ -328,7 +328,7 @@ TradeSlots TradeData::GetTradeSlotForItem(ObjectGuid itemGuid) const
 
 Item* TradeData::GetSpellCastItem() const
 {
-    return m_spellCastItem ? m_player->GetItemByGuid(m_spellCastItem) : NULL;
+    return !m_spellCastItem.IsEmpty() ? m_player->GetItemByGuid(m_spellCastItem) : NULL;
 }
 
 void TradeData::SetItem(TradeSlots slot, Item* item)
@@ -1322,7 +1322,7 @@ uint32 Player::EnvironmentalDamage(EnviromentalDamage type, uint32 damage)
     DealDamageMods(this, damage, &absorb);
 
     WorldPacket data(SMSG_ENVIRONMENTALDAMAGELOG, (21));
-    data << uint64(GetGUID());
+    data << GetGUID();
     data << uint8(type != DAMAGE_FALL_TO_VOID ? type : DAMAGE_FALL);
     data << uint32(damage);
     data << uint32(absorb);
@@ -1558,7 +1558,7 @@ void Player::SetDrunkValue(uint8 newDrunkValue, uint32 itemId /*= 0*/)
         return;
 
     WorldPacket data(SMSG_CROSSED_INEBRIATION_THRESHOLD, (8+4+4));
-    data << uint64(GetGUID());
+    data << GetGUID();
     data << uint32(newDrunkenState);
     data << uint32(itemId);
     SendMessageToSet(&data, true);
@@ -2819,7 +2819,7 @@ Creature* Player::GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask)
         return NULL;
 
     // not allow interaction under control, but allow with own pets
-    if (creature->GetCharmerGUID())
+    if (!creature->GetCharmerGUID().IsEmpty())
         return NULL;
 
     // not enemy
@@ -3006,7 +3006,7 @@ void Player::RemoveFromGroup(Group* group, ObjectGuid guid, RemoveMethod method 
 void Player::SendLogXPGain(uint32 GivenXP, Unit* victim, uint32 BonusXP, bool recruitAFriend, float /*group_rate*/)
 {
     WorldPacket data(SMSG_LOG_XPGAIN, 21); // guess size?
-    data << uint64(victim ? victim->GetGUID() : ObjectGuid::Empty);
+    data << (victim ? victim->GetGUID() : ObjectGuid::Empty);
     data << uint32(GivenXP + BonusXP);                      // given experience
     data << uint8(victim ? 0 : 1);                          // 00-kill_xp type, 01-non_kill_xp type
 
@@ -4808,10 +4808,10 @@ void Player::DeleteFromDB(ObjectGuid playerguid, uint32 accountId, bool updateRe
             {
                 do
                 {
-                    if (Player* pFriend = ObjectAccessor::FindPlayer(ObjectGuid(HIGHGUID_PLAYER, 0, (*resultFriends)[0].GetUInt32())))
+                    if (Player* pFriend = ObjectAccessor::FindPlayer(ObjectGuid(HIGHGUID_PLAYER, (*resultFriends)[0].GetUInt32())))
                     {
-                        pFriend->GetSocial()->RemoveFromSocialList(guid, false);
-                        sSocialMgr->SendFriendStatus(pFriend, FRIEND_REMOVED, guid, false);
+                        pFriend->GetSocial()->RemoveFromSocialList(playerguid, false);
+                        sSocialMgr->SendFriendStatus(pFriend, FRIEND_REMOVED, playerguid, false);
                     }
                 } while (resultFriends->NextRow());
             }
@@ -7151,7 +7151,7 @@ bool Player::RewardHonor(Unit* victim, uint32 groupsize, int32 honor, bool pvpto
     // victim_rank [0, 20+] HK: <>
     WorldPacket data(SMSG_PVP_CREDIT, 4+8+4);
     data << uint32(honor);
-    data << uint64(victim_guid);
+    data << victim_guid;
     data << uint32(victim_rank);
 
     GetSession()->SendPacket(&data);
@@ -8913,14 +8913,15 @@ void Player::RemovedInsignia(Player* looterPlr)
 void Player::SendLootRelease(ObjectGuid guid)
 {
     WorldPacket data(SMSG_LOOT_RELEASE_RESPONSE, (8+1));
-    data << uint64(guid) << uint8(1);
+    data << guid << uint8(1);
     SendDirectMessage(&data);
 }
 
 void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 {
-    if (ObjectGuid lguid = GetLootGUID())
-        m_session->DoLootRelease(lguid);
+    ObjectGuid currentLootGuid = GetLootGUID();
+    if (!currentLootGuid.IsEmpty())
+        m_session->DoLootRelease(currentLootGuid);
 
     Loot* loot = 0;
     PermissionTypes permission = ALL_PERMISSION;
@@ -9237,7 +9238,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
         SetLootGUID(guid);
 
         WorldPacket data(SMSG_LOOT_RESPONSE, (9 + 50));           // we guess size
-        data << uint64(guid);
+        data << guid;
         data << uint8(loot_type);
         data << LootView(*loot, this, permission);
         SendDirectMessage(&data);
@@ -9255,7 +9256,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 void Player::SendLootError(ObjectGuid guid, LootError error)
 {
     WorldPacket data(SMSG_LOOT_RESPONSE, 10);
-    data << uint64(guid);
+    data << guid;
     data << uint8(LOOT_NONE);
     data << uint8(error);
     SendDirectMessage(&data);
@@ -9939,14 +9940,14 @@ uint32 Player::GetXPRestBonus(uint32 xp)
 void Player::SetBindPoint(ObjectGuid guid)
 {
     WorldPacket data(SMSG_BINDER_CONFIRM, 8);
-    data << uint64(guid);
+    data << guid;
     GetSession()->SendPacket(&data);
 }
 
 void Player::SendTalentWipeConfirm(ObjectGuid guid)
 {
     WorldPacket data(MSG_TALENT_WIPE_CONFIRM, 8 + 4);
-    data << uint64(guid);
+    data << guid;
     uint32 cost = sWorld->getBoolConfig(CONFIG_NO_RESET_TALENT_COST) ? 0 : GetNextResetTalentsCost();
     data << cost;
     GetSession()->SendPacket(&data);
@@ -11949,7 +11950,7 @@ InventoryResult Player::CanRollForItemInLFG(ItemTemplate const* proto, WorldObje
 }
 
 // Return stored item (if stored to stack, it can diff. from pItem). And pItem ca be deleted in this case.
-Item* Player::StoreNewItem(ItemPosCountVec const& dest, uint32 item, bool update, int32 randomPropertyId, AllowedLooterSet const& allowedLooters)
+Item* Player::StoreNewItem(ItemPosCountVec const& dest, uint32 item, bool update, int32 randomPropertyId, GuidSet const& allowedLooters)
 {
     uint32 count = 0;
     for (ItemPosCountVec::const_iterator itr = dest.begin(); itr != dest.end(); ++itr)
@@ -11973,13 +11974,13 @@ Item* Player::StoreNewItem(ItemPosCountVec const& dest, uint32 item, bool update
 
             // save data
             std::ostringstream ss;
-            AllowedLooterSet::const_iterator itr = allowedLooters.begin();
+            GuidSet::const_iterator itr = allowedLooters.begin();
             ss << *itr;
             for (++itr; itr != allowedLooters.end(); ++itr)
                 ss << ' ' << *itr;
 
             PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_ITEM_BOP_TRADE);
-            stmt->setUInt32(0, pItem->GetGUIDLow());
+            stmt->setUInt32(0, pItem->GetGUID().GetCounter());
             stmt->setString(1, ss.str());
             CharacterDatabase.Execute(stmt);
         }
@@ -13206,7 +13207,7 @@ void Player::SwapItem(uint16 src, uint16 dst)
 
     // if player is moving bags and is looting an item inside this bag
     // release the loot
-    if (GetLootGUID())
+    if (!GetLootGUID().IsEmpty())
     {
         bool released = false;
         if (IsBagPos(src))
@@ -13343,8 +13344,8 @@ void Player::SendEquipError(InventoryResult msg, Item* pItem, Item* pItem2, uint
 
     if (msg != EQUIP_ERR_OK)
     {
-        data << uint64(pItem ? pItem->GetGUID() : ObjectGuid::Empty);
-        data << uint64(pItem2 ? pItem2->GetGUID() : ObjectGuid::Empty);
+        data << (pItem ? pItem->GetGUID() : ObjectGuid::Empty);
+        data << (pItem2 ? pItem2->GetGUID() : ObjectGuid::Empty);
         data << uint8(0);                                   // bag type subclass, used with EQUIP_ERR_EVENT_AUTOEQUIP_BIND_CONFIRM and EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG2
 
         switch (msg)
@@ -13382,7 +13383,7 @@ void Player::SendBuyError(BuyResult msg, Creature* creature, uint32 item, uint32
 {
     TC_LOG_DEBUG("network", "WORLD: Sent SMSG_BUY_FAILED");
     WorldPacket data(SMSG_BUY_FAILED, (8+4+4+1));
-    data << uint64(creature ? creature->GetGUID() : ObjectGuid::Empty);
+    data << (creature ? creature->GetGUID() : ObjectGuid::Empty);
     data << uint32(item);
     data << uint8(msg);
     GetSession()->SendPacket(&data);
@@ -13392,8 +13393,8 @@ void Player::SendSellError(SellResult msg, Creature* creature, ObjectGuid guid)
 {
     TC_LOG_DEBUG("network", "WORLD: Sent SMSG_SELL_ITEM");
     WorldPacket data(SMSG_SELL_ITEM, (8+8+1));  // last check 4.3.4
-    data << uint64(creature ? creature->GetGUID() : ObjectGuid::Empty);
-    data << uint64(guid);
+    data << (creature ? creature->GetGUID() : ObjectGuid::Empty);
+    data << guid;
     data << uint8(msg);
     GetSession()->SendPacket(&data);
 }
@@ -14307,7 +14308,7 @@ void Player::SendNewItem(Item* item, uint32 count, bool received, bool created, 
 
                                                             // last check 2.0.10
     WorldPacket data(SMSG_ITEM_PUSH_RESULT, (8+4+4+4+1+4+4+4+4+4));
-    data << uint64(GetGUID());                              // player GUID
+    data << GetGUID();                                      // player GUID
     data << uint32(received);                               // 0=looted, 1=from npc
     data << uint32(created);                                // 0=received, 1=created
     data << uint32(1);                                      // bool print error to chat
@@ -16506,7 +16507,7 @@ void Player::KilledMonsterCredit(uint32 entry, ObjectGuid guid /*= ObjectGuid::E
     uint16 addkillcount = 1;
     uint32 real_entry = entry;
     Creature* killed = NULL;
-    if (guid)
+    if (!guid.IsEmpty())
     {
         killed = GetMap()->GetCreature(guid);
         if (killed && killed->GetEntry())
@@ -16950,7 +16951,7 @@ void Player::SendQuestConfirmAccept(const Quest* quest, Player* pReceiver)
         WorldPacket data(SMSG_QUEST_CONFIRM_ACCEPT, (4 + strTitle.size() + 8));
         data << uint32(quest->GetQuestId());
         data << strTitle;
-        data << uint64(GetGUID());
+        data << GetGUID();
         pReceiver->GetSession()->SendPacket(&data);
 
         TC_LOG_DEBUG("network", "WORLD: Sent SMSG_QUEST_CONFIRM_ACCEPT");
@@ -16962,7 +16963,7 @@ void Player::SendPushToPartyResponse(Player* player, uint8 msg)
     if (player)
     {
         WorldPacket data(MSG_QUEST_PUSH_RESULT, 8 + 1);
-        data << uint64(player->GetGUID());
+        data << player->GetGUID();
         data << uint8(msg);                                 // valid values: 0-8
         GetSession()->SendPacket(&data);
         TC_LOG_DEBUG("network", "WORLD: Sent MSG_QUEST_PUSH_RESULT");
@@ -16984,7 +16985,7 @@ void Player::SendQuestUpdateAddCreatureOrGo(Quest const* quest, ObjectGuid guid,
     data << uint32(entry);
     data << uint32(old_count + add_count);
     data << uint32(quest->RequiredNpcOrGoCount[ creatureOrGO_idx ]);
-    data << uint64(guid);
+    data << guid;
     GetSession()->SendPacket(&data);
 
     uint16 log_slot = FindQuestSlot(quest->GetQuestId());
@@ -17786,7 +17787,7 @@ bool Player::LoadFromDB(ObjectGuid guid, SQLQueryHolder *holder)
     // unread mails and next delivery time, actual mails not loaded
     _LoadMailInit(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_MAIL_COUNT), holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_MAIL_DATE));
 
-    m_social = sSocialMgr->LoadFromDB(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_SOCIAL_LIST), GetGUIDLow());
+    m_social = sSocialMgr->LoadFromDB(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_SOCIAL_LIST), GetGUID());
 
     // check PLAYER_CHOSEN_TITLE compatibility with PLAYER__FIELD_KNOWN_TITLES
     // note: PLAYER__FIELD_KNOWN_TITLES updated at quest status loaded
@@ -18312,7 +18313,7 @@ void Player::_LoadVoidStorage(PreparedQueryResult result)
         }
 
         std::string name;
-        if (creatorGuid && !sObjectMgr->GetPlayerNameByGUID(creatorGuid, name))
+        if (!creatorGuid.IsEmpty() && !sObjectMgr->GetPlayerNameByGUID(creatorGuid, name))
         {
             TC_LOG_ERROR("entities.player", "Player::_LoadVoidStorage - Player (GUID: %u, name: %s) has an item with an invalid creator guid, set to 0 (item id: " UI64FMTD ", entry: %u, creator: %s).", GetGUIDLow(), GetName().c_str(), itemId, itemEntry, creatorGuid.ToString().c_str());
             creatorGuid.Clear();
@@ -20690,7 +20691,8 @@ void Player::UpdateDuelFlag(time_t currTime)
 
 Pet* Player::GetPet() const
 {
-    if (ObjectGuid pet_guid = GetPetGUID())
+    ObjectGuid pet_guid = GetPetGUID();
+    if (!pet_guid.IsEmpty())
     {
         if (!pet_guid.IsPet())
             return NULL;
@@ -20801,13 +20803,13 @@ void Player::StopCastingCharm()
         else if (charm->IsVehicle())
             ExitVehicle();
     }
-    if (GetCharmGUID())
+    if (!GetCharmGUID().IsEmpty())
         charm->RemoveCharmAuras();
 
-    if (GetCharmGUID())
+    if (!GetCharmGUID().IsEmpty())
     {
         TC_LOG_FATAL("entities.player", "Player %s (%s) is not able to uncharm unit (%s)", GetName().c_str(), GetGUID().ToString().c_str(), GetCharmGUID().ToString().c_str());
-        if (charm->GetCharmerGUID())
+        if (!charm->GetCharmerGUID().IsEmpty())
         {
             TC_LOG_FATAL("entities.player", "Charmed unit has charmer %s", charm->GetCharmerGUID().ToString().c_str());
             ASSERT(false);
@@ -20932,7 +20934,7 @@ void Player::PetSpellInitialize()
     CharmInfo* charmInfo = pet->GetCharmInfo();
 
     WorldPacket data(SMSG_PET_SPELLS, 8+2+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+1);
-    data << uint64(pet->GetGUID());
+    data << pet->GetGUID();
     data << uint16(pet->GetCreatureTemplate()->family);         // creature family (required for pet talents)
     data << uint32(pet->GetDuration());
     data << uint8(pet->GetReactState());
@@ -21017,7 +21019,7 @@ void Player::PossessSpellInitialize()
     }
 
     WorldPacket data(SMSG_PET_SPELLS, 8+2+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+1);
-    data << uint64(charm->GetGUID());
+    data << charm->GetGUID();
     data << uint16(0);
     data << uint32(0);
     data << uint32(0);
@@ -21039,7 +21041,7 @@ void Player::VehicleSpellInitialize()
     uint8 cooldownCount = vehicle->m_CreatureSpellCooldowns.size();
 
     WorldPacket data(SMSG_PET_SPELLS, 8 + 2 + 4 + 4 + 4 * 10 + 1 + 1 + cooldownCount * (4 + 2 + 4 + 4));
-    data << uint64(vehicle->GetGUID());                     // Guid
+    data << vehicle->GetGUID();                             // Guid
     data << uint16(0);                                      // Pet Family (0 for all vehicles)
     data << uint32(vehicle->IsSummon() ? vehicle->ToTempSummon()->GetTimer() : 0); // Duration
     // The following three segments are read by the client as one uint32
@@ -21141,7 +21143,7 @@ void Player::CharmSpellInitialize()
     }
 
     WorldPacket data(SMSG_PET_SPELLS, 8+2+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+4*addlist+1);
-    data << uint64(charm->GetGUID());
+    data << charm->GetGUID();
     data << uint16(0);
     data << uint32(0);
 
@@ -21921,7 +21923,7 @@ inline bool Player::_StoreOrEquipNewItem(uint32 vendorslot, uint32 item, uint8 c
         uint32 new_count = pVendor->UpdateVendorItemCurrentCount(crItem, count);
 
         WorldPacket data(SMSG_BUY_ITEM, (8+4+4+4));
-        data << uint64(pVendor->GetGUID());
+        data << pVendor->GetGUID();
         data << uint32(vendorslot + 1);                   // numbered from 1 at client
         data << int32(crItem->maxcount > 0 ? new_count : 0xFFFFFFFF);
         data << uint32(count);
@@ -22618,7 +22620,7 @@ void Player::ModifySpellCooldown(uint32 spellId, int32 cooldown)
 
     WorldPacket data(SMSG_MODIFY_COOLDOWN, 4 + 8 + 4);
     data << uint32(spellId);            // Spell ID
-    data << uint64(GetGUID());          // Player GUID
+    data << GetGUID();                  // Player GUID
     data << int32(cooldown);            // Cooldown mod in milliseconds
     GetSession()->SendPacket(&data);
 
@@ -22634,7 +22636,7 @@ void Player::SendCooldownEvent(SpellInfo const* spellInfo, uint32 itemId /*= 0*/
     // Send activate cooldown timer (possible 0) at client side
     WorldPacket data(SMSG_COOLDOWN_EVENT, 4 + 8);
     data << uint32(spellInfo->Id);
-    data << uint64(GetGUID());
+    data << GetGUID();
     SendDirectMessage(&data);
 }
 
@@ -22989,7 +22991,8 @@ bool Player::CanAlwaysSee(WorldObject const* obj) const
     if (m_mover == obj)
         return true;
 
-    if (ObjectGuid guid = GetGuidValue(PLAYER_FARSIGHT))
+    ObjectGuid guid = GetGuidValue(PLAYER_FARSIGHT);
+    if (!guid.IsEmpty())
         if (obj->GetGUID() == guid)
             return true;
 
@@ -23266,14 +23269,16 @@ bool Player::IsQuestRewarded(uint32 quest_id) const
 
 Unit* Player::GetSelectedUnit() const
 {
-    if (ObjectGuid selectionGUID = GetTarget())
+    ObjectGuid selectionGUID = GetTarget();
+    if (!selectionGUID.IsEmpty())
         return ObjectAccessor::GetUnit(*this, selectionGUID);
     return NULL;
 }
 
 Player* Player::GetSelectedPlayer() const
 {
-    if (ObjectGuid selectionGUID = GetTarget())
+    ObjectGuid selectionGUID = GetTarget();
+    if (!selectionGUID.IsEmpty())
         return ObjectAccessor::GetPlayer(*this, selectionGUID);
     return NULL;
 }
@@ -23311,7 +23316,7 @@ void Player::AddComboPoints(Unit* target, int8 count, Spell* spell)
         *comboPoints += count;
     else
     {
-        if (m_comboTarget)
+        if (!m_comboTarget.IsEmpty())
             if (Unit* target2 = ObjectAccessor::GetUnit(*this, m_comboTarget))
                 target2->RemoveComboPointHolder(GetGUID());
 
@@ -25064,7 +25069,8 @@ void Player::SetViewpoint(WorldObject* target, bool apply)
 
 WorldObject* Player::GetViewpoint() const
 {
-    if (ObjectGuid guid = GetGuidValue(PLAYER_FARSIGHT))
+    ObjectGuid guid = GetGuidValue(PLAYER_FARSIGHT);
+    if (!guid.IsEmpty())
         return (WorldObject*)ObjectAccessor::GetObjectByTypeMask(*this, guid, TYPEMASK_SEER);
     return NULL;
 }
@@ -25479,8 +25485,7 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
     InventoryResult msg = CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, item->itemid, item->count);
     if (msg == EQUIP_ERR_OK)
     {
-        AllowedLooterSet looters = item->GetAllowedLooters();
-        Item* newitem = StoreNewItem(dest, item->itemid, true, item->randomPropertyId, looters);
+        Item* newitem = StoreNewItem(dest, item->itemid, true, item->randomPropertyId, item->GetAllowedLooters());
 
         if (qitem)
         {
@@ -25525,7 +25530,7 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, item->itemid, item->count);
 
         // LootItem is being removed (looted) from the container, delete it from the DB.
-        if (loot->containerID > 0)
+        if (!loot->containerID.IsEmpty())
             loot->DeleteLootItemFromContainerItemDB(item->itemid);
 
     }
@@ -26175,7 +26180,7 @@ void Player::ResummonPetTemporaryUnSummonedIfAny()
     if (IsPetNeedBeTemporaryUnsummoned())
         return;
 
-    if (GetPetGUID())
+    if (!GetPetGUID().IsEmpty())
         return;
 
     Pet* NewPet = new Pet(this);
@@ -26583,7 +26588,7 @@ void Player::SendClearCooldown(uint32 spell_id, Unit* target)
 {
     WorldPacket data(SMSG_CLEAR_COOLDOWN, 4+8);
     data << uint32(spell_id);
-    data << uint64(target->GetGUID());
+    data << target->GetGUID();
     SendDirectMessage(&data);
 }
 

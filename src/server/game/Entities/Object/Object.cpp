@@ -53,7 +53,7 @@
 #include "Battleground.h"
 #include "Chat.h"
 
-Object::Object() : m_PackGUID(sizeof(uint64)+1)
+Object::Object()
 {
     m_objectTypeId      = TYPEID_OBJECT;
     m_objectType        = TYPEMASK_OBJECT;
@@ -168,7 +168,7 @@ void Object::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) c
     if (target == this)                                      // building packet for yourself
         flags |= UPDATEFLAG_SELF;
 
-    switch (GetGUIDHigh())
+    switch (GetGUID().GetHigh())
     {
         case HIGHGUID_PLAYER:
         case HIGHGUID_PET:
@@ -273,14 +273,14 @@ void Object::DestroyForPlayer(Player* target, bool onDeath) const
             if (bg->isArena())
             {
                 WorldPacket data(SMSG_ARENA_UNIT_DESTROYED, 8);
-                data << uint64(GetGUID());
+                data << GetGUID();
                 target->GetSession()->SendPacket(&data);
             }
         }
     }
 
     WorldPacket data(SMSG_DESTROY_OBJECT, 8 + 1);
-    data << uint64(GetGUID());
+    data << GetGUID();
     //! If the following bool is true, the client will call "void CGUnit_C::OnDeath()" for this object.
     //! OnDeath() does for eg trigger death animation and interrupts certain spells/missiles/auras/sounds...
     data << uint8(onDeath ? 1 : 0);
@@ -325,7 +325,7 @@ uint16 Object::GetUInt16Value(uint16 index, uint8 offset) const
     return *(((uint16*)&m_uint32Values[index])+offset);
 }
 
-ObjectGuid Object::GetGuidValue(uint16 index) const
+ObjectGuid const& Object::GetGuidValue(uint16 index) const
 {
     ASSERT(index + 1 < m_valuesCount || PrintIndexError(index, false));
     return *((ObjectGuid*)&(m_uint32Values[index]));
@@ -375,7 +375,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
         movementFlagsExtra = self->m_movementInfo.GetExtraMovementFlags();
         hasSpline = self->IsSplineEnabled();
 
-        hasTransportTime2 = self->m_movementInfo.transport.guid != 0 && self->m_movementInfo.transport.time2 != 0;
+        hasTransportTime2 = !self->m_movementInfo.transport.guid.IsEmpty() && self->m_movementInfo.transport.time2 != 0;
         hasTransportTime3 = false;
         hasPitch = self->HasUnitMovementFlag(MovementFlags(MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING)) || self->HasExtraUnitMovementFlag(MOVEMENTFLAG2_ALWAYS_ALLOW_PITCHING);
         hasFallDirection = self->HasUnitMovementFlag(MOVEMENTFLAG_FALLING);
@@ -399,10 +399,10 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
         data->WriteBit(hasFallData);                                            // Has fall data
         data->WriteBit(!hasSplineElevation);                                    // Has spline elevation
         data->WriteBit(guid[5]);
-        data->WriteBit(self->m_movementInfo.transport.guid);                    // Has transport data
+        data->WriteBit(!self->m_movementInfo.transport.guid.IsEmpty());         // Has transport data
         data->WriteBit(0);                                                      // Is missing time
 
-        if (self->m_movementInfo.transport.guid)
+        if (!self->m_movementInfo.transport.guid.IsEmpty())
         {
             ObjectGuid transGuid = self->m_movementInfo.transport.guid;
 
@@ -507,7 +507,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
         *data << float(self->GetPositionZMinusOffset());
         data->WriteByteSeq(guid[5]);
 
-        if (self->m_movementInfo.transport.guid)
+        if (!self->m_movementInfo.transport.guid.IsEmpty())
         {
             ObjectGuid transGuid = self->m_movementInfo.transport.guid;
 
@@ -850,10 +850,10 @@ void Object::SetUInt64Value(uint16 index, uint64 value)
     }
 }
 
-bool Object::AddGuidValue(uint16 index, ObjectGuid value)
+bool Object::AddGuidValue(uint16 index, ObjectGuid const& value)
 {
     ASSERT(index + 1 < m_valuesCount || PrintIndexError(index, true));
-    if (value && !*((ObjectGuid*)&(m_uint32Values[index])))
+    if (!value.IsEmpty() && ((ObjectGuid*)&(m_uint32Values[index]))->IsEmpty())
     {
         *((ObjectGuid*)&(m_uint32Values[index])) = value;
         _changesMask.SetBit(index);
@@ -871,10 +871,10 @@ bool Object::AddGuidValue(uint16 index, ObjectGuid value)
     return false;
 }
 
-bool Object::RemoveGuidValue(uint16 index, ObjectGuid value)
+bool Object::RemoveGuidValue(uint16 index, ObjectGuid const& value)
 {
     ASSERT(index + 1 < m_valuesCount || PrintIndexError(index, true));
-    if (value && *((ObjectGuid*)&(m_uint32Values[index])) == value)
+    if (!value.IsEmpty() && *((ObjectGuid*)&(m_uint32Values[index])) == value)
     {
         m_uint32Values[index] = 0;
         m_uint32Values[index + 1] = 0;
@@ -958,7 +958,7 @@ void Object::SetUInt16Value(uint16 index, uint8 offset, uint16 value)
     }
 }
 
-void Object::SetGuidValue(uint16 index, ObjectGuid value)
+void Object::SetGuidValue(uint16 index, ObjectGuid const& value)
 {
     ASSERT(index + 1 < m_valuesCount || PrintIndexError(index, true));
     if (*((ObjectGuid*)&(m_uint32Values[index])) != value)
@@ -1256,7 +1256,7 @@ void MovementInfo::OutDebug()
     TC_LOG_INFO("misc", "flags2 %s (%u)", Movement::MovementFlagsExtra_ToString(flags2).c_str(), flags2);
     TC_LOG_INFO("misc", "time %u current time %u", time, getMSTime());
     TC_LOG_INFO("misc", "position: `%s`", pos.ToString().c_str());
-    if (transport.guid)
+    if (!transport.guid.IsEmpty())
     {
         TC_LOG_INFO("misc", "TRANSPORT:");
         TC_LOG_INFO("misc", "%s", transport.guid.ToString().c_str());
@@ -2087,7 +2087,7 @@ void WorldObject::SendMessageToSet(WorldPacket* data, Player const* skipped_rcvr
 void WorldObject::SendObjectDeSpawnAnim(ObjectGuid guid)
 {
     WorldPacket data(SMSG_GAMEOBJECT_DESPAWN_ANIM, 8);
-    data << uint64(guid);
+    data << guid;
     SendMessageToSet(&data, true);
 }
 
@@ -2760,7 +2760,7 @@ void WorldObject::PlayDistanceSound(uint32 sound_id, Player* target /*= NULL*/)
 {
     WorldPacket data(SMSG_PLAY_OBJECT_SOUND, 4 + 8);
     data << uint32(sound_id);
-    data << uint64(GetGUID());
+    data << GetGUID();
     if (target)
         target->SendDirectMessage(&data);
     else
@@ -2771,7 +2771,7 @@ void WorldObject::PlayDirectSound(uint32 sound_id, Player* target /*= NULL*/)
 {
     WorldPacket data(SMSG_PLAY_SOUND, 4 + 8);
     data << uint32(sound_id);
-    data << uint64(GetGUID());
+    data << GetGUID();
     if (target)
         target->SendDirectMessage(&data);
     else

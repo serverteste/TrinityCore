@@ -377,7 +377,8 @@ void WorldSession::HandleLogoutRequestOpcode(WorldPacket& /*recvData*/)
 {
     TC_LOG_DEBUG("network", "WORLD: Recvd CMSG_LOGOUT_REQUEST Message, security - %u", GetSecurity());
 
-    if (ObjectGuid lguid = GetPlayer()->GetLootGUID())
+    ObjectGuid lguid = GetPlayer()->GetLootGUID();
+    if (!lguid.IsEmpty())
         DoLootRelease(lguid);
 
     bool instantLogout = (GetPlayer()->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) && !GetPlayer()->IsInCombat()) ||
@@ -611,13 +612,13 @@ void WorldSession::HandleAddFriendOpcodeCallBack(PreparedQueryResult result, std
 
         if (HasPermission(rbac::RBAC_PERM_ALLOW_GM_FRIEND) || AccountMgr::IsPlayerAccount(AccountMgr::GetSecurity(friendAccountId, realmHandle.Index)))
         {
-            if (friendGuid)
+            if (!friendGuid.IsEmpty())
             {
                 if (friendGuid == GetPlayer()->GetGUID())
                     friendResult = FRIEND_SELF;
                 else if (GetPlayer()->GetTeam() != team && !HasPermission(rbac::RBAC_PERM_TWO_SIDE_ADD_FRIEND))
                     friendResult = FRIEND_ENEMY;
-                else if (GetPlayer()->GetSocial()->HasFriend(friendGuid.GetCounter()))
+                else if (GetPlayer()->GetSocial()->HasFriend(friendGuid))
                     friendResult = FRIEND_ALREADY;
                 else
                 {
@@ -626,18 +627,18 @@ void WorldSession::HandleAddFriendOpcodeCallBack(PreparedQueryResult result, std
                         friendResult = FRIEND_ADDED_ONLINE;
                     else
                         friendResult = FRIEND_ADDED_OFFLINE;
-                    if (!GetPlayer()->GetSocial()->AddToSocialList(friendGuid.GetCounter(), false))
+                    if (!GetPlayer()->GetSocial()->AddToSocialList(friendGuid, false))
                     {
                         friendResult = FRIEND_LIST_FULL;
                         TC_LOG_DEBUG("network", "WORLD: %s's friend list is full.", GetPlayer()->GetName().c_str());
                     }
                 }
-                GetPlayer()->GetSocial()->SetFriendNote(friendGuid.GetCounter(), friendNote);
+                GetPlayer()->GetSocial()->SetFriendNote(friendGuid, friendNote);
             }
         }
     }
 
-    sSocialMgr->SendFriendStatus(GetPlayer(), friendResult, friendGuid.GetCounter(), false);
+    sSocialMgr->SendFriendStatus(GetPlayer(), friendResult, friendGuid, false);
 
     TC_LOG_DEBUG("network", "WORLD: Sent (SMSG_FRIEND_STATUS)");
 }
@@ -650,9 +651,9 @@ void WorldSession::HandleDelFriendOpcode(WorldPacket& recvData)
 
     recvData >> FriendGUID;
 
-    _player->GetSocial()->RemoveFromSocialList(FriendGUID.GetCounter(), false);
+    _player->GetSocial()->RemoveFromSocialList(FriendGUID, false);
 
-    sSocialMgr->SendFriendStatus(GetPlayer(), FRIEND_REMOVED, FriendGUID.GetCounter(), false);
+    sSocialMgr->SendFriendStatus(GetPlayer(), FRIEND_REMOVED, FriendGUID, false);
 
     TC_LOG_DEBUG("network", "WORLD: Sent motd (SMSG_FRIEND_STATUS)");
 }
@@ -692,24 +693,24 @@ void WorldSession::HandleAddIgnoreOpcodeCallBack(PreparedQueryResult result)
     {
         IgnoreGuid = ObjectGuid(HIGHGUID_PLAYER, (*result)[0].GetUInt32());
 
-        if (IgnoreGuid)
+        if (!IgnoreGuid.IsEmpty())
         {
             if (IgnoreGuid == GetPlayer()->GetGUID())              //not add yourself
                 ignoreResult = FRIEND_IGNORE_SELF;
-            else if (GetPlayer()->GetSocial()->HasIgnore(IgnoreGuid.GetCounter()))
+            else if (GetPlayer()->GetSocial()->HasIgnore(IgnoreGuid))
                 ignoreResult = FRIEND_IGNORE_ALREADY;
             else
             {
                 ignoreResult = FRIEND_IGNORE_ADDED;
 
                 // ignore list full
-                if (!GetPlayer()->GetSocial()->AddToSocialList(IgnoreGuid.GetCounter(), true))
+                if (!GetPlayer()->GetSocial()->AddToSocialList(IgnoreGuid, true))
                     ignoreResult = FRIEND_IGNORE_FULL;
             }
         }
     }
 
-    sSocialMgr->SendFriendStatus(GetPlayer(), ignoreResult, IgnoreGuid.GetCounter(), false);
+    sSocialMgr->SendFriendStatus(GetPlayer(), ignoreResult, IgnoreGuid, false);
 
     TC_LOG_DEBUG("network", "WORLD: Sent (SMSG_FRIEND_STATUS)");
 }
@@ -722,9 +723,9 @@ void WorldSession::HandleDelIgnoreOpcode(WorldPacket& recvData)
 
     recvData >> IgnoreGUID;
 
-    _player->GetSocial()->RemoveFromSocialList(IgnoreGUID.GetCounter(), true);
+    _player->GetSocial()->RemoveFromSocialList(IgnoreGUID, true);
 
-    sSocialMgr->SendFriendStatus(GetPlayer(), FRIEND_IGNORE_REMOVED, IgnoreGUID.GetCounter(), false);
+    sSocialMgr->SendFriendStatus(GetPlayer(), FRIEND_IGNORE_REMOVED, IgnoreGUID, false);
 
     TC_LOG_DEBUG("network", "WORLD: Sent motd (SMSG_FRIEND_STATUS)");
 }
@@ -735,7 +736,7 @@ void WorldSession::HandleSetContactNotesOpcode(WorldPacket& recvData)
     ObjectGuid guid;
     std::string note;
     recvData >> guid >> note;
-    _player->GetSocial()->SetFriendNote(guid.GetCounter(), note);
+    _player->GetSocial()->SetFriendNote(guid, note);
 }
 
 void WorldSession::HandleBugOpcode(WorldPacket& recvData)
@@ -1055,7 +1056,7 @@ void WorldSession::HandleRequestAccountData(WorldPacket& recvData)
     dest.resize(destSize);
 
     WorldPacket data(SMSG_UPDATE_ACCOUNT_DATA, 8+4+4+4+destSize);
-    data << uint64(_player ? _player->GetGUID() : ObjectGuid::Empty);
+    data << (_player ? _player->GetGUID() : ObjectGuid::Empty);
     data << uint32(type);                                   // type (0-7)
     data << uint32(adata->Time);                            // unix time
     data << uint32(size);                                   // decompressed length
@@ -1257,7 +1258,7 @@ void WorldSession::HandleInspectOpcode(WorldPacket& recvData)
     player->BuildEnchantmentsInfoData(&data);
     if (Guild* guild = sGuildMgr->GetGuildById(player->GetGuildId()))
     {
-        data << uint64(guild->GetGUID());
+        data << guild->GetGUID();
         data << uint32(guild->GetLevel());
         data << uint64(guild->GetExperience());
         data << uint32(guild->GetMembersCount());
@@ -2047,7 +2048,7 @@ void WorldSession::HandleObjectUpdateFailedOpcode(WorldPacket& recvPacket)
     recvPacket.ReadByteSeq(guid[5]);
 
     WorldObject* obj = ObjectAccessor::GetWorldObject(*GetPlayer(), guid);
-    TC_LOG_ERROR("network", "Object update failed for object " UI64FMTD " (%s) for player %s (%u)", uint64(guid), obj ? obj->GetName().c_str() : "object-not-found", GetPlayerName().c_str(), GetGuidLow());
+    TC_LOG_ERROR("network", "Object update failed for %s (%s) for player %s (%s)", guid.ToString().c_str(), obj ? obj->GetName().c_str() : "object-not-found", GetPlayerName().c_str(), _player->GetGUID().ToString().c_str());
 
     // If create object failed for current player then client will be stuck on loading screen
     if (_player->GetGUID() == guid)

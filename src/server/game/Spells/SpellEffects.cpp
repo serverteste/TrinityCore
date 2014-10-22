@@ -306,8 +306,8 @@ void Spell::EffectInstaKill(SpellEffIndex /*effIndex*/)
         finish();
 
     WorldPacket data(SMSG_SPELLINSTAKILLLOG, 8+8+4);
-    data << uint64(m_caster->GetGUID());
-    data << uint64(unitTarget->GetGUID());
+    data << m_caster->GetGUID();
+    data << unitTarget->GetGUID();
     data << uint32(m_spellInfo->Id);
     m_caster->SendMessageToSet(&data, true);
 
@@ -1100,7 +1100,7 @@ void Spell::EffectUnlearnSpecialization(SpellEffIndex effIndex)
 
     player->RemoveSpell(spellToUnlearn);
 
-    TC_LOG_DEBUG("spells", "Spell: Player %u has unlearned spell %u from NpcGUID: %u", player->GetGUIDLow(), spellToUnlearn, m_caster->GetGUIDLow());
+    TC_LOG_DEBUG("spells", "Spell: %s has unlearned spell %u from %s", player->GetGUID().ToString().c_str(), spellToUnlearn, m_caster->GetGUID().ToString().c_str());
 }
 
 void Spell::EffectPowerDrain(SpellEffIndex effIndex)
@@ -1219,7 +1219,7 @@ void Spell::EffectHeal(SpellEffIndex /*effIndex*/)
     if (unitTarget && unitTarget->IsAlive() && damage >= 0)
     {
         // Try to get original caster
-        Unit* caster = m_originalCasterGUID ? m_originalCaster : m_caster;
+        Unit* caster = !m_originalCasterGUID.IsEmpty() ? m_originalCaster : m_caster;
 
         // Skip if m_originalCaster not available
         if (!caster)
@@ -1724,8 +1724,8 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype)
         // Players shouldn't be able to loot gameobjects that are currently despawned
         if (!gameObjTarget->isSpawned() && !player->IsGameMaster())
         {
-            TC_LOG_ERROR("spells", "Possible hacking attempt: Player %s [guid: %u] tried to loot a gameobject [entry: %u id: %u] which is on respawn time without being in GM mode!",
-                            player->GetName().c_str(), player->GetGUIDLow(), gameObjTarget->GetEntry(), gameObjTarget->GetGUIDLow());
+            TC_LOG_ERROR("spells", "Possible hacking attempt: Player %s [%s] tried to loot a gameobject [%s] which is on respawn time without being in GM mode!",
+                player->GetName().c_str(), player->GetGUID().ToString().c_str(), gameObjTarget->GetGUID().ToString().c_str());
             return;
         }
         // special case, already has GossipHello inside so return and avoid calling twice
@@ -1873,9 +1873,9 @@ void Spell::EffectOpenLock(SpellEffIndex effIndex)
             if (gameObjTarget)
             {
                 // Allow one skill-up until respawned
-                if (!gameObjTarget->IsInSkillupList(player->GetGUIDLow()) &&
+                if (!gameObjTarget->IsInSkillupList(player->GetGUID()) &&
                     player->UpdateGatherSkill(skillId, pureSkillValue, reqSkillValue))
-                    gameObjTarget->AddToSkillupList(player->GetGUIDLow());
+                    gameObjTarget->AddToSkillupList(player->GetGUID());
             }
             else if (itemTarget)
             {
@@ -2217,7 +2217,7 @@ void Spell::EffectLearnSpell(SpellEffIndex effIndex)
     uint32 spellToLearn = (m_spellInfo->Id == 483 || m_spellInfo->Id == 55884) ? damage : m_spellInfo->Effects[effIndex].TriggerSpell;
     player->LearnSpell(spellToLearn, false);
 
-    TC_LOG_DEBUG("spells", "Spell: Player %u has learned spell %u from NpcGUID=%u", player->GetGUIDLow(), spellToLearn, m_caster->GetGUIDLow());
+    TC_LOG_DEBUG("spells", "Spell: %s has learned spell %u from %s", player->GetGUID().ToString().c_str(), spellToLearn, m_caster->GetGUID().ToString().c_str());
 }
 
 void Spell::EffectDispel(SpellEffIndex effIndex)
@@ -2279,8 +2279,8 @@ void Spell::EffectDispel(SpellEffIndex effIndex)
                 if (!failCount)
                 {
                     // Failed to dispell
-                    dataFail << uint64(m_caster->GetGUID());            // Caster GUID
-                    dataFail << uint64(unitTarget->GetGUID());          // Victim GUID
+                    dataFail << m_caster->GetGUID();                    // Caster GUID
+                    dataFail << unitTarget->GetGUID();                  // Victim GUID
                     dataFail << uint32(m_spellInfo->Id);                // dispel spell id
                 }
                 ++failCount;
@@ -2409,8 +2409,7 @@ void Spell::EffectUntrainTalents(SpellEffIndex /*effIndex*/)
     if (!unitTarget || m_caster->GetTypeId() == TYPEID_PLAYER)
         return;
 
-    if (ObjectGuid guid = m_caster->GetGUID()) // the trainer is the caster
-        unitTarget->ToPlayer()->SendTalentWipeConfirm(guid);
+    unitTarget->ToPlayer()->SendTalentWipeConfirm(m_caster->GetGUID());
 }
 
 void Spell::EffectTeleUnitsFaceCaster(SpellEffIndex effIndex)
@@ -2694,7 +2693,7 @@ void Spell::EffectTameCreature(SpellEffIndex /*effIndex*/)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    if (m_caster->GetPetGUID())
+    if (!m_caster->GetPetGUID().IsEmpty())
         return;
 
     if (!unitTarget)
@@ -3836,7 +3835,7 @@ void Spell::EffectDuel(SpellEffIndex effIndex)
     Player* target = unitTarget->ToPlayer();
 
     // caster or target already have requested duel
-    if (caster->duel || target->duel || !target->GetSocial() || target->GetSocial()->HasIgnore(caster->GetGUIDLow()))
+    if (caster->duel || target->duel || !target->GetSocial() || target->GetSocial()->HasIgnore(caster->GetGUID()))
         return;
 
     // Players can only fight a duel in zones with this flag
@@ -3888,8 +3887,8 @@ void Spell::EffectDuel(SpellEffIndex effIndex)
 
     // Send request
     WorldPacket data(SMSG_DUEL_REQUESTED, 8 + 8);
-    data << uint64(pGameObj->GetGUID());
-    data << uint64(caster->GetGUID());
+    data << pGameObj->GetGUID();
+    data << caster->GetGUID();
     caster->GetSession()->SendPacket(&data);
     target->GetSession()->SendPacket(&data);
 
@@ -3929,7 +3928,7 @@ void Spell::EffectStuck(SpellEffIndex /*effIndex*/)
         return;
 
     TC_LOG_DEBUG("spells", "Spell Effect: Stuck");
-    TC_LOG_INFO("spells", "Player %s (guid %u) used auto-unstuck future at map %u (%f, %f, %f)", player->GetName().c_str(), player->GetGUIDLow(), player->GetMapId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ());
+    TC_LOG_INFO("spells", "Player %s (%s) used auto-unstuck future at map %u (%f, %f, %f)", player->GetName().c_str(), player->GetGUID().ToString().c_str(), player->GetMapId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ());
 
     if (player->IsInFlight())
         return;
@@ -3965,7 +3964,7 @@ void Spell::EffectSummonPlayer(SpellEffIndex /*effIndex*/)
     unitTarget->ToPlayer()->SetSummonPoint(m_caster->GetMapId(), x, y, z);
 
     WorldPacket data(SMSG_SUMMON_REQUEST, 8+4+4);
-    data << uint64(m_caster->GetGUID());                    // summoner guid
+    data << m_caster->GetGUID();                            // summoner guid
     data << uint32(m_caster->GetZoneId());                  // summoner zone
     data << uint32(MAX_PLAYER_SUMMON_DELAY*IN_MILLISECONDS); // auto decline after msecs
     unitTarget->ToPlayer()->GetSession()->SendPacket(&data);
@@ -4199,8 +4198,8 @@ void Spell::EffectSummonObject(SpellEffIndex effIndex)
 
     uint32 go_id = m_spellInfo->Effects[effIndex].MiscValue;
     uint8 slot = m_spellInfo->Effects[effIndex].Effect - SPELL_EFFECT_SUMMON_OBJECT_SLOT1;
-
-    if (ObjectGuid guid = m_caster->m_ObjectSlot[slot])
+    ObjectGuid guid = m_caster->m_ObjectSlot[slot];
+    if (!guid.IsEmpty())
     {
         if (GameObject* obj = m_caster->GetMap()->GetGameObject(guid))
         {
@@ -4374,7 +4373,7 @@ void Spell::EffectForceDeselect(SpellEffIndex /*effIndex*/)
         return;
 
     WorldPacket data(SMSG_CLEAR_TARGET, 8);
-    data << uint64(m_caster->GetGUID());
+    data << m_caster->GetGUID();
     m_caster->SendMessageToSet(&data, true);
 }
 
@@ -5118,8 +5117,8 @@ void Spell::EffectStealBeneficialBuff(SpellEffIndex effIndex)
                 if (!failCount)
                 {
                     // Failed to dispell
-                    dataFail << uint64(m_caster->GetGUID());            // Caster GUID
-                    dataFail << uint64(unitTarget->GetGUID());          // Victim GUID
+                    dataFail << m_caster->GetGUID();                    // Caster GUID
+                    dataFail << unitTarget->GetGUID();                  // Victim GUID
                     dataFail << uint32(m_spellInfo->Id);                // dispel spell id
                 }
                 ++failCount;
@@ -5286,7 +5285,7 @@ void Spell::EffectCreateTamedPet(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER || unitTarget->GetPetGUID() || unitTarget->getClass() != CLASS_HUNTER)
+    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER || !unitTarget->GetPetGUID().IsEmpty() || unitTarget->getClass() != CLASS_HUNTER)
         return;
 
     uint32 creatureEntry = m_spellInfo->Effects[effIndex].MiscValue;
@@ -5483,7 +5482,7 @@ void Spell::EffectPlayMusic(SpellEffIndex effIndex)
 
     WorldPacket data(SMSG_PLAY_MUSIC, 4);
     data << uint32(soundid);
-    data << uint64(unitTarget->GetGUID());
+    data << unitTarget->GetGUID();
     unitTarget->ToPlayer()->GetSession()->SendPacket(&data);
 }
 
@@ -5684,7 +5683,7 @@ void Spell::EffectBind(SpellEffIndex effIndex)
 
     // zone update
     data.Initialize(SMSG_PLAYERBOUND, 8 + 4);
-    data << uint64(m_caster->GetGUID());
+    data << m_caster->GetGUID();
     data << uint32(areaId);
     player->SendDirectMessage(&data);
 }

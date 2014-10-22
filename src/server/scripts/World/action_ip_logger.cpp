@@ -201,7 +201,6 @@ class CharacterActionIpLogger : public PlayerScript
 
             // We declare all the required variables
             uint32 playerGuid = player->GetSession()->GetAccountId();
-            uint32 characterGuid = player->GetGUIDLow();
             const std::string currentIp = player->GetSession()->GetRemoteAddress();
             std::string systemNote = "ERROR"; // "ERROR" is a placeholder here. We change it...
 
@@ -234,7 +233,7 @@ class CharacterActionIpLogger : public PlayerScript
             PreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_INS_CHAR_IP_LOGGING);
 
             stmt->setUInt32(0, playerGuid);
-            stmt->setUInt32(1, characterGuid);
+            stmt->setUInt32(1, player->GetGUID().GetCounter());
             stmt->setUInt8(2, aType);
             stmt->setString(3, currentIp.c_str()); // We query the ip here.
             stmt->setString(4, systemNote.c_str());
@@ -268,8 +267,6 @@ public:
         // Action IP Logger is only intialized if config is set up
         // Else, this script isn't loaded in the first place: We require no config check.
 
-        // We declare all the required variables
-        uint32 characterGuid = guid.GetCounter(); // We have no access to any member function of Player* or WorldSession*. So use old-fashioned way.
         // Query playerGuid/accountId, as we only have characterGuid
         std::string systemNote = "ERROR"; // "ERROR" is a placeholder here. We change it later.
 
@@ -294,7 +291,7 @@ public:
         PreparedStatement* stmt2 = LoginDatabase.GetPreparedStatement(LOGIN_INS_ALDL_IP_LOGGING);
 
         stmt2->setUInt32(0, playerGuid);
-        stmt2->setUInt32(1, characterGuid);
+        stmt2->setUInt32(1, guid.GetCounter());
         stmt2->setUInt8(2, aType);
         stmt2->setUInt32(3, playerGuid);
         stmt2->setString(4, systemNote.c_str());

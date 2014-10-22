@@ -173,11 +173,11 @@ public:
 
             if (!handler->GetSession())
                 handler->PSendSysMessage(LANG_CHARACTER_DELETED_LIST_LINE_CONSOLE,
-                    itr->guid.GetCounter(), itr->name.c_str(), itr->accountName.empty() ? "<Not existed>" : itr->accountName.c_str(),
+                    itr->guid.ToString().c_str(), itr->name.c_str(), itr->accountName.empty() ? "<Not existed>" : itr->accountName.c_str(),
                     itr->accountId, dateStr.c_str());
             else
                 handler->PSendSysMessage(LANG_CHARACTER_DELETED_LIST_LINE_CHAT,
-                    itr->guid.GetCounter(), itr->name.c_str(), itr->accountName.empty() ? "<Not existed>" : itr->accountName.c_str(),
+                    itr->guid.ToString().c_str(), itr->name.c_str(), itr->accountName.empty() ? "<Not existed>" : itr->accountName.c_str(),
                     itr->accountId, dateStr.c_str());
         }
 
@@ -199,7 +199,7 @@ public:
     {
         if (delInfo.accountName.empty())                    // account not exist
         {
-            handler->PSendSysMessage(LANG_CHARACTER_DELETED_SKIP_ACCOUNT, delInfo.name.c_str(), delInfo.guid.GetCounter(), delInfo.accountId);
+            handler->PSendSysMessage(LANG_CHARACTER_DELETED_SKIP_ACCOUNT, delInfo.name.c_str(), delInfo.guid.ToString().c_str(), delInfo.accountId);
             return;
         }
 
@@ -207,13 +207,13 @@ public:
         uint32 charcount = AccountMgr::GetCharactersCount(delInfo.accountId);
         if (charcount >= 10)
         {
-            handler->PSendSysMessage(LANG_CHARACTER_DELETED_SKIP_FULL, delInfo.name.c_str(), delInfo.guid.GetCounter(), delInfo.accountId);
+            handler->PSendSysMessage(LANG_CHARACTER_DELETED_SKIP_FULL, delInfo.name.c_str(), delInfo.guid.ToString().c_str(), delInfo.accountId);
             return;
         }
 
-        if (sObjectMgr->GetPlayerGUIDByName(delInfo.name))
+        if (!sObjectMgr->GetPlayerGUIDByName(delInfo.name).IsEmpty())
         {
-            handler->PSendSysMessage(LANG_CHARACTER_DELETED_SKIP_NAME, delInfo.name.c_str(), delInfo.guid.GetCounter(), delInfo.accountId);
+            handler->PSendSysMessage(LANG_CHARACTER_DELETED_SKIP_NAME, delInfo.name.c_str(), delInfo.guid.ToString().c_str(), delInfo.accountId);
             return;
         }
 
@@ -416,7 +416,7 @@ public:
                     return false;
 
                 std::string oldNameLink = handler->playerLink(targetName);
-                handler->PSendSysMessage(LANG_RENAME_PLAYER_GUID, oldNameLink.c_str(), targetGuid.GetCounter());
+                handler->PSendSysMessage(LANG_RENAME_PLAYER_GUID, oldNameLink.c_str(), targetGuid.ToString().c_str());
 
                 PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ADD_AT_LOGIN_FLAG);
                 stmt->setUInt16(0, uint16(AT_LOGIN_RENAME));
@@ -483,13 +483,13 @@ public:
         {
             handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER, handler->GetNameLink(target).c_str());
             target->SetAtLoginFlag(AT_LOGIN_CUSTOMIZE);
-            stmt->setUInt32(1, target->GetGUIDLow());
+            stmt->setUInt32(1, target->GetGUID().GetCounter());
         }
         else
         {
             std::string oldNameLink = handler->playerLink(targetName);
             stmt->setUInt32(1, targetGuid.GetCounter());
-            handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), targetGuid.GetCounter());
+            handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), targetGuid.ToString().c_str());
         }
         CharacterDatabase.Execute(stmt);
 
@@ -511,12 +511,12 @@ public:
         {
             handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER, handler->GetNameLink(target).c_str());
             target->SetAtLoginFlag(AT_LOGIN_CHANGE_FACTION);
-            stmt->setUInt32(1, target->GetGUIDLow());
+            stmt->setUInt32(1, target->GetGUID().GetCounter());
         }
         else
         {
             std::string oldNameLink = handler->playerLink(targetName);
-            handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), targetGuid.GetCounter());
+            handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), targetGuid.ToString().c_str());
             stmt->setUInt32(1, targetGuid.GetCounter());
         }
         CharacterDatabase.Execute(stmt);
@@ -539,13 +539,13 @@ public:
             /// @todo add text into database
             handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER, handler->GetNameLink(target).c_str());
             target->SetAtLoginFlag(AT_LOGIN_CHANGE_RACE);
-            stmt->setUInt32(1, target->GetGUIDLow());
+            stmt->setUInt32(1, target->GetGUID().GetCounter());
         }
         else
         {
             std::string oldNameLink = handler->playerLink(targetName);
             /// @todo add text into database
-            handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), targetGuid.GetCounter());
+            handler->PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), targetGuid.ToString().c_str());
             stmt->setUInt32(1, targetGuid.GetCounter());
         }
         CharacterDatabase.Execute(stmt);
@@ -799,7 +799,7 @@ public:
         AccountMgr::GetName(accountId, accountName);
 
         Player::DeleteFromDB(characterGuid, accountId, true, true);
-        handler->PSendSysMessage(LANG_CHARACTER_DELETED, characterName.c_str(), characterGuid.GetCounter(), accountName.c_str(), accountId);
+        handler->PSendSysMessage(LANG_CHARACTER_DELETED, characterName.c_str(), characterGuid.ToString().c_str(), accountName.c_str(), accountId);
 
         return true;
     }
@@ -990,7 +990,7 @@ public:
             return false;
         }
 
-        switch (PlayerDumpWriter().WriteDump(fileStr, uint32(guid)))
+        switch (PlayerDumpWriter().WriteDump(fileStr, uint32(guid.GetCounter())))
         {
             case DUMP_SUCCESS:
                 handler->PSendSysMessage(LANG_COMMAND_EXPORT_SUCCESS);

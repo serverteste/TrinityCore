@@ -483,9 +483,14 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
 
     // check item enchant aura cast
     if (!amount && caster)
-        if (ObjectGuid itemGUID = GetBase()->GetCastItemGUID())
+    {
+        ObjectGuid itemGUID = GetBase()->GetCastItemGUID();
+        if (!itemGUID.IsEmpty())
+        {
             if (Player* playerCaster = caster->ToPlayer())
+            {
                 if (Item* castItem = playerCaster->GetItemByGuid(itemGUID))
+                {
                     if (castItem->GetItemSuffixFactor())
                     {
                         ItemRandomSuffixEntry const* item_rand_suffix = sItemRandomSuffixStore.LookupEntry(abs(castItem->GetItemRandomPropertyId()));
@@ -498,10 +503,10 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
                                 {
                                     for (int t = 0; t < MAX_ITEM_ENCHANTMENT_EFFECTS; t++)
                                         if (pEnchant->spellid[t] == m_spellInfo->Id)
-                                    {
-                                        amount = uint32((item_rand_suffix->prefix[k]*castItem->GetItemSuffixFactor()) / 10000);
+                                        {
+                                        amount = uint32((item_rand_suffix->prefix[k] * castItem->GetItemSuffixFactor()) / 10000);
                                         break;
-                                    }
+                                        }
                                 }
 
                                 if (amount)
@@ -509,6 +514,10 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
                             }
                         }
                     }
+                }
+            }
+        }
+    }
 
     // custom amount calculations go here
     switch (GetAuraType())
@@ -4609,7 +4618,7 @@ void AuraEffect::HandleAuraRetainComboPoints(AuraApplication const* aurApp, uint
 
     // combo points was added in SPELL_EFFECT_ADD_COMBO_POINTS handler
     // remove only if aura expire by time (in case combo points amount change aura removed without combo points lost)
-    if (!(apply) && GetBase()->GetDuration() == 0 && target->ToPlayer()->GetComboTarget())
+    if (!(apply) && GetBase()->GetDuration() == 0 && !target->ToPlayer()->GetComboTarget().IsEmpty())
         if (Unit* unit = ObjectAccessor::GetUnit(*target, target->ToPlayer()->GetComboTarget()))
             target->ToPlayer()->AddComboPoints(unit, -GetAmount());
 }
