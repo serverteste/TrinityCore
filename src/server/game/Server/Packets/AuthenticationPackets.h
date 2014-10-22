@@ -18,10 +18,11 @@
 #ifndef AuthenticationPackets_h__
 
 #include "Packet.h"
+#include "Util.h"
 
 namespace WorldPackets
 {
-    namespace AuthPackets
+    namespace Auth
     {
         class AuthResponse final : public ServerPacket
         {
@@ -52,38 +53,45 @@ namespace WorldPackets
                 std::string Description;
             };
 
+            struct AuthSuccessInfo
+            {
+                uint32 TimeRemain = 0; ///< the remaining game time that the account has in seconds. It is not currently implemented and probably won't ever be.
+                uint8 AccountExpansionLevel = 0; ///< the current expansion of this account, the possible values are in @ref Expansions
+                uint8 ActiveExpansionLevel = 0; ///< the current server expansion, the possible values are in @ref Expansions
+                uint32 TimeRested = 0; ///< affects the return value of the GetBillingTimeRested() client API call, it is the number of seconds you have left until the experience points and loot you receive from creatures and quests is reduced. It is only used in the Asia region in retail, it's not implemented in TC and will probably never be.
+                uint8 TimeOptions = 0; ///< controls the behavior of the client regarding billing, used in Asia realms, as they don't have monthly subscriptions, possible values are in @ref BillingPlanFlags. It is not currently implemented and will probably never be.
+
+                uint32 VirtualRealmAddress = 0; ///< a special identifier made from the Index, BattleGroup and Region. @todo implement
+                uint32 RealmNamesCount = 0; ///< the number of realms connected to this one (inclusive). @todo implement
+                uint32 TimeSecondsUntilPCKick = 0; ///< @todo research
+                uint32 CurrencyID = 0; ///< this is probably used for the ingame shop. @todo implement
+
+                std::list<RealmInfo> VirtualRealms;     ///< list of realms connected to this one (inclusive) @todo implement
+                std::list<CharacterTemplate> Templates; ///< list of pre-made character templates. @todo implement
+
+                ExpansionRequirementContainer const* AvailableClasses = nullptr; ///< the minimum AccountExpansion required to select the classes
+                ExpansionRequirementContainer const* AvailableRaces = nullptr; ///< the minimum AccountExpansion required to select the races
+
+                bool IsExpansionTrial = false;
+                bool ForceCharacterTemplate = false; ///< forces the client to always use a character template when creating a new character. @see Templates. @todo implement
+                uint16 NumPlayersHorde = 0; ///< number of horde players in this realm. @todo implement
+                uint16 NumPlayersAlliance = 0; ///< number of alliance players in this realm. @todo implement
+                bool IsVeteranTrial = false; ///< @todo research
+            };
+
+            struct AuthWaitInfo
+            {
+                uint32 WaitCount = 0; ///< position of the account in the login queue
+                bool HasFCM = false; ///< true if the account has a forced character migration pending. @todo implement
+            };
+
             AuthResponse();
 
             void Write() override;
-            std::string ToString() const override;
 
-            bool HasAccountInfo            = false; ///< true if this packet contains account information. It is always false when Queued is true.
-            bool Queued                    = false; ///< true if the account is in the login queue. If true then WaitCount must be set
-            uint32 WaitCount                   = 0; ///< position of the account in the login queue, it is only sent when Queued is true
-            uint32 TimeRemain                  = 0; ///< the remaining game time that the account has in seconds. It is not currently implemented and probably won't ever be.
-            uint8 AccountExpansionLevel        = 0; ///< the current expansion of this account, the possible values are in @ref Expansions
-            uint8 ActiveExpansionLevel         = 0; ///< the current server expansion, the possible values are in @ref Expansions
-            uint32 TimeRested                  = 0; ///< affects the return value of the GetBillingTimeRested() client API call, it is the number of seconds you have left until the experience points and loot you receive from creatures and quests is reduced. It is only used in the Asia region in retail, it's not implemented in TC and will probably never be.
-            uint8 TimeOptions                  = 0; ///< controls the behavior of the client regarding billing, used in Asia realms, as they don't have monthly subscriptions, possible values are in @ref BillingPlanFlags. It is not currently implemented and will probably never be.
-            uint8 Result                       = 0; ///< the result of the authentication process, it is AUTH_OK if it succeeded and the account is ready to log in. It can also be AUTH_WAIT_QUEUE if the account entered the login queue (Queued, QueuePos), possible values are @ref ResponseCodes
-
-            uint32 VirtualRealmAddress         = 0; ///< a special identifier made from the Index, BattleGroup and Region. @todo implement
-            uint32 RealmNamesCount             = 0; ///< the number of realms connected to this one (inclusive). @todo implement
-            uint32 TimeSecondsUntilPCKick      = 0; ///< @todo research
-            uint32 CurrencyID                  = 0; ///< this is probably used for the ingame shop. @todo implement
-
-            std::list<RealmInfo> VirtualRealms;     ///< list of realms connected to this one (inclusive) @todo implement
-            std::list<CharacterTemplate> Templates; ///< list of pre-made character templates. @todo implement
-
-            ExpansionRequirementContainer const* AvailableClasses = nullptr; ///< the minimum AccountExpansion required to select the classes
-            ExpansionRequirementContainer const* AvailableRaces  = nullptr; ///< the minimum AccountExpansion required to select the races
-
-            bool IsExpansionTrial                  = false;
-            bool ForceCharacterTemplate            = false; ///< forces the client to always use a character template when creating a new character. @see Templates. @todo implement
-            uint16 NumPlayersHorde                     = 0; ///< number of horde players in this realm. @todo implement
-            uint16 NumPlayersAlliance                  = 0; ///< number of alliance players in this realm. @todo implement
-            bool IsVeteranTrial                    = false; ///< @todo research
-            bool HasFCM                            = false; ///< true if the account has a forced character migration pending. @todo implement
+            Optional<AuthSuccessInfo> SuccessInfo; ///< contains the packet data in case that it has account information (It is never set when WaitInfo is set), otherwise its contents are undefined.
+            Optional<AuthWaitInfo> WaitInfo; ///< contains the queue wait information in case the account is in the login queue.
+            uint8 Result = 0; ///< the result of the authentication process, it is AUTH_OK if it succeeded and the account is ready to log in. It can also be AUTH_WAIT_QUEUE if the account entered the login queue (Queued, QueuePos), possible values are @ref ResponseCodes
         };
     }
 }

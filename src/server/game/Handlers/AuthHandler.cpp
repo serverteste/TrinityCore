@@ -23,44 +23,50 @@
 
 void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
 {
-    WorldPackets::AuthPackets::AuthResponse response;
+    WorldPackets::Auth::AuthResponse response;
+    response.SuccessInfo.HasValue = code == AUTH_OK;
     response.Result = code;
-    response.Queued = queued;
-    response.WaitCount = queuePos;
-    response.AccountExpansionLevel = Expansion();
-    response.ActiveExpansionLevel = Expansion();
-    response.VirtualRealmAddress = realmHandle.Index;
+    response.WaitInfo.HasValue = queued;
+    response.WaitInfo.value.WaitCount = queuePos;
+    if (code == AUTH_OK)
+    {
+        response.SuccessInfo.value.AccountExpansionLevel = Expansion();
+        response.SuccessInfo.value.ActiveExpansionLevel = Expansion();
+        response.SuccessInfo.value.VirtualRealmAddress = realmHandle.Index;
 
-    std::string realmName = sObjectMgr->GetRealmName(realmHandle.Index);
+        std::string realmName = sObjectMgr->GetRealmName(realmHandle.Index);
 
-    // Send current home realm. Also there is no need to send it later in realm queries.
-    response.VirtualRealms.emplace_back(realmHandle.Index, true, false, realmName, realmName);
+        // Send current home realm. Also there is no need to send it later in realm queries.
+        response.SuccessInfo.value.VirtualRealms.emplace_back(realmHandle.Index, true, false, realmName, realmName);
 
-    response.AvailableClasses = &sObjectMgr->GetClassExpansionRequirements();
-    response.AvailableRaces = &sObjectMgr->GetRaceExpansionRequirements();
+        response.SuccessInfo.value.AvailableClasses = &sObjectMgr->GetClassExpansionRequirements();
+        response.SuccessInfo.value.AvailableRaces = &sObjectMgr->GetRaceExpansionRequirements();
+    }
 
-    SendPacket(response);
+    response.Write();
+    SendPacket(&response.GetWorldPacket());
 }
 
 void WorldSession::SendAuthWaitQue(uint32 position)
 {
-    WorldPackets::AuthPackets::AuthResponse response;
+    WorldPackets::Auth::AuthResponse response;
 
     if (position == 0)
     {
         response.Result = AUTH_OK;
-        response.HasAccountInfo = false;
-        response.Queued = false;
+        response.SuccessInfo.HasValue = false;
+        response.WaitInfo.HasValue = false;
     }
     else
     {
-        response.Queued = true;
-        response.HasAccountInfo = false;
-        response.WaitCount = position;
+        response.WaitInfo.HasValue = true;
+        response.SuccessInfo.HasValue = false;
+        response.WaitInfo.value.WaitCount = position;
         response.Result = AUTH_WAIT_QUEUE;
     }
-
-    SendPacket(response);
+    
+    response.Write();
+    SendPacket(&response.GetWorldPacket());
 }
 
 void WorldSession::SendClientCacheVersion(uint32 version)

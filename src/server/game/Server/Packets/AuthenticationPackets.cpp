@@ -17,31 +17,35 @@
 
 #include "AuthenticationPackets.h"
 
-WorldPackets::AuthPackets::AuthResponse::AuthResponse()
-    : ServerPacket(SMSG_AUTH_RESPONSE, 1 + 4 + 1 + 4 + 1 + 4 + 1 + 1 + 4) { }
+WorldPackets::Auth::AuthResponse::AuthResponse()
+    : ServerPacket(SMSG_AUTH_RESPONSE, 132) 
+{
+    WaitInfo.HasValue = false;
+    SuccessInfo.HasValue = false;
+}
 
-void WorldPackets::AuthPackets::AuthResponse::Write()
+void WorldPackets::Auth::AuthResponse::Write()
 {
     _worldPacket << uint8(Result);
-    _worldPacket.WriteBit(Result == AUTH_OK);
-    _worldPacket.WriteBit(Queued);
+    _worldPacket.WriteBit(SuccessInfo.HasValue);
+    _worldPacket.WriteBit(WaitInfo.HasValue);
 
-    if (Result == AUTH_OK)
+    if (SuccessInfo.HasValue)
     {
-        _worldPacket << uint32(VirtualRealmAddress);
-        _worldPacket << uint32(VirtualRealms.size());
-        _worldPacket << uint32(TimeRemain);
-        _worldPacket << uint32(TimeOptions);
-        _worldPacket << uint32(TimeRested);
-        _worldPacket << uint8(ActiveExpansionLevel);
-        _worldPacket << uint8(AccountExpansionLevel);
-        _worldPacket << uint32(TimeSecondsUntilPCKick);
-        _worldPacket << uint32(AvailableRaces->size());
-        _worldPacket << uint32(AvailableClasses->size());
-        _worldPacket << uint32(Templates.size());
-        _worldPacket << uint32(CurrencyID);
+        _worldPacket << uint32(SuccessInfo.value.VirtualRealmAddress);
+        _worldPacket << uint32(SuccessInfo.value.VirtualRealms.size());
+        _worldPacket << uint32(SuccessInfo.value.TimeRemain);
+        _worldPacket << uint32(SuccessInfo.value.TimeOptions);
+        _worldPacket << uint32(SuccessInfo.value.TimeRested);
+        _worldPacket << uint8(SuccessInfo.value.ActiveExpansionLevel);
+        _worldPacket << uint8(SuccessInfo.value.AccountExpansionLevel);
+        _worldPacket << uint32(SuccessInfo.value.TimeSecondsUntilPCKick);
+        _worldPacket << uint32(SuccessInfo.value.AvailableRaces->size());
+        _worldPacket << uint32(SuccessInfo.value.AvailableClasses->size());
+        _worldPacket << uint32(SuccessInfo.value.Templates.size());
+        _worldPacket << uint32(SuccessInfo.value.CurrencyID);
 
-        for (auto& realm : VirtualRealms)
+        for (auto& realm : SuccessInfo.value.VirtualRealms)
         {
             _worldPacket << uint32(realm.RealmAddress);
             _worldPacket.WriteBit(realm.IsLocal);
@@ -52,19 +56,19 @@ void WorldPackets::AuthPackets::AuthResponse::Write()
             _worldPacket.WriteString(realm.RealmNameNormalized);
         }
 
-        for (auto& race : *AvailableRaces)
+        for (auto& race : *SuccessInfo.value.AvailableRaces)
         {
             _worldPacket << uint8(race.first); /// the current race
             _worldPacket << uint8(race.second); /// the required Expansion
         }
 
-        for (auto& klass : *AvailableClasses)
+        for (auto& klass : *SuccessInfo.value.AvailableClasses)
         {
             _worldPacket << uint8(klass.first); /// the current class
             _worldPacket << uint8(klass.second); /// the required Expansion
         }
 
-        for (auto& templat : Templates)
+        for (auto& templat : SuccessInfo.value.Templates)
         {
             _worldPacket << uint32(templat.TemplateSetId);
             _worldPacket << uint32(templat.TemplateClasses.size());
@@ -80,30 +84,24 @@ void WorldPackets::AuthPackets::AuthResponse::Write()
             _worldPacket.WriteString(templat.Description);
         }
 
-        _worldPacket.WriteBit(IsExpansionTrial);
-        _worldPacket.WriteBit(ForceCharacterTemplate);
-        _worldPacket.WriteBit(NumPlayersHorde != 0);
-        _worldPacket.WriteBit(NumPlayersAlliance != 0);
-        _worldPacket.WriteBit(IsVeteranTrial);
+        _worldPacket.WriteBit(SuccessInfo.value.IsExpansionTrial);
+        _worldPacket.WriteBit(SuccessInfo.value.ForceCharacterTemplate);
+        _worldPacket.WriteBit(SuccessInfo.value.NumPlayersHorde != 0);
+        _worldPacket.WriteBit(SuccessInfo.value.NumPlayersAlliance != 0);
+        _worldPacket.WriteBit(SuccessInfo.value.IsVeteranTrial);
 
-        if (NumPlayersHorde)
-            _worldPacket << uint16(NumPlayersHorde);
+        if (SuccessInfo.value.NumPlayersHorde)
+            _worldPacket << uint16(SuccessInfo.value.NumPlayersHorde);
 
-        if (NumPlayersAlliance)
-            _worldPacket << uint16(NumPlayersAlliance);
+        if (SuccessInfo.value.NumPlayersAlliance)
+            _worldPacket << uint16(SuccessInfo.value.NumPlayersAlliance);
     }
 
-    if (Queued)
+    if (WaitInfo.HasValue)
     {
-        _worldPacket << uint32(WaitCount);
-        _worldPacket.WriteBit(HasFCM);
+        _worldPacket << uint32(WaitInfo.value.WaitCount);
+        _worldPacket.WriteBit(WaitInfo.value.HasFCM);
     }
 
     _worldPacket.FlushBits();
-}
-
-std::string WorldPackets::AuthPackets::AuthResponse::ToString() const
-{
-    // Perhaps write some additional data here
-    return "WorldPackets::AuthenticationPackets::AuthResponse";
 }

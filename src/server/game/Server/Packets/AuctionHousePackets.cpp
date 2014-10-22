@@ -55,8 +55,3 @@ void WorldPackets::AuctionHousePackets::AuctionCommandResult::Write()
             break;
     }
 }
-
-std::string WorldPackets::AuctionHousePackets::AuctionCommandResult::ToString() const
-{
-    return "WorldPackets::AuctionHousePackets::AuctionCommandResult";
-}

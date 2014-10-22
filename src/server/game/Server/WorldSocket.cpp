@@ -332,12 +332,6 @@ void WorldSocket::SendPacket(WorldPacket& packet)
     }
 }
 
-void WorldSocket::SendPacket(WorldPackets::ServerPacket& packet)
-{
-    packet.Write();
-    SendPacket(*packet.GetWorldPacket());
-}
-
 void WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
 {
     uint8 digest[SHA_DIGEST_LENGTH];
@@ -595,12 +589,13 @@ void WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
 
 void WorldSocket::SendAuthResponseError(uint8 code)
 {
-    WorldPackets::AuthPackets::AuthResponse response;
-    response.HasAccountInfo = false;
-    response.Queued = false;
+    WorldPackets::Auth::AuthResponse response;
+    response.SuccessInfo.HasValue = false;
+    response.WaitInfo.HasValue = false;
     response.Result = code;
+    response.Write();
 
-    SendPacket(response);
+    SendPacket(response.GetWorldPacket());
 }
 
 void WorldSocket::HandlePing(WorldPacket& recvPacket)

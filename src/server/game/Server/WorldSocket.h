@@ -76,7 +76,6 @@ public:
     void Start() override;
 
     void SendPacket(WorldPacket& packet);
-    void SendPacket(WorldPackets::ServerPacket& packet);
 
 protected:
     void ReadHandler() override;

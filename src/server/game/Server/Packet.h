@@ -32,9 +32,7 @@ namespace WorldPackets
         virtual void Write() = 0;
         virtual void Read() = 0;
 
-        virtual std::string ToString() const = 0;
-
-        WorldPacket* GetWorldPacket() { return &_worldPacket; }
+        WorldPacket& GetWorldPacket() { return _worldPacket; }
 
     protected:
         WorldPacket _worldPacket;
@@ -48,6 +46,7 @@ namespace WorldPackets
         void Read() override final { ASSERT(!"Read not implemented for server packets."); }
 
         size_t GetSize() const { return _worldPacket.size(); }
+        void Reset() { _worldPacket.clear(); }
     };
 }
 

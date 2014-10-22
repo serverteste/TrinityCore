@@ -273,12 +273,6 @@ void WorldSession::SendPacket(WorldPacket* packet, bool forced /*= false*/)
     m_Socket->SendPacket(*packet);
 }
 
-void WorldSession::SendPacket(WorldPackets::ServerPacket& packet)
-{
-    packet.Write();
-    SendPacket(packet.GetWorldPacket());
-}
-
 /// Add an incoming packet to the queue
 void WorldSession::QueuePacket(WorldPacket* new_packet)
 {
