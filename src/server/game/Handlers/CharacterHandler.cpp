@@ -46,7 +46,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
-
+#include "BattlefieldMgr.h"
 
 class LoginQueryHolder : public SQLQueryHolder
 {
@@ -274,6 +274,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
              >> createInfo.HairColor
              >> createInfo.FacialHair
              >> createInfo.OutfitId;
+
 
     if (!HasPermission(rbac::RBAC_PERM_SKIP_CHECK_CHARACTER_CREATION_TEAMMASK))
     {
@@ -639,6 +640,8 @@ void WorldSession::HandleCharCreateCallback(PreparedQueryResult result, Characte
 
             SendCharCreate(CHAR_CREATE_SUCCESS);
 
+
+
             TC_LOG_INFO("entities.player.character", "Account: %d (IP: %s) Create Character:[%s] (GUID: %u)", GetAccountId(), GetRemoteAddress().c_str(), createInfo->Name.c_str(), newChar.GetGUIDLow());
             sScriptMgr->OnPlayerCreate(&newChar);
             sWorld->AddCharacterNameData(newChar.GetGUID(), newChar.GetName(), newChar.getGender(), newChar.getRace(), newChar.getClass(), newChar.getLevel());
@@ -989,6 +992,13 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
 
     m_playerLoading = false;
 
+    if (sWorld->getBoolConfig(CONFIG_WINTERGRASP_ENABLE))
+        if (Battlefield* battlefieldWG = sBattlefieldMgr->GetBattlefieldByBattleId(BATTLEFIELD_BATTLEID_WG))
+        {
+            battlefieldWG->SendInitWorldStatesTo(pCurrChar);
+            pCurrChar->SendUpdateWorldState(4354, uint32(time(NULL)) + (battlefieldWG->IsWarTime() ? battlefieldWG->GetTimer() : 0));
+            pCurrChar->SendInitWorldStates(pCurrChar->GetZoneId(), pCurrChar->GetAreaId());
+        }
     // Handle Login-Achievements (should be handled after loading)
     _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN, 1);
 
@@ -1340,6 +1350,7 @@ void WorldSession::HandleCharCustomize(WorldPacket& recvData)
              >> customizeInfo.HairStyle
              >> customizeInfo.FacialHair
              >> customizeInfo.Face;
+
 
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_AT_LOGIN);
 
@@ -1983,6 +1994,7 @@ void WorldSession::HandleCharFactionOrRaceChange(WorldPacket& recvData)
                     stmt->setUInt32(0, newReputation);
                     stmt->setUInt32(1, lowGuid);
                     trans->Append(stmt);
+
 
                     stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_REP_FACTION_CHANGE);
                     stmt->setUInt16(0, uint16(newReputation));
