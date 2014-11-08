@@ -581,7 +581,7 @@ Player* Battleground::_GetPlayerForTeam(uint32 teamId, BattlegroundPlayerMap::co
     {
         uint32 team = itr->second.Team;
         if (!team)
-            team = player->GetTeam();
+            team = player->GetBGTeam();
         if (team != teamId)
             player = NULL;
     }
@@ -672,7 +672,11 @@ void Battleground::RewardReputationToTeam(uint32 faction_id, uint32 Reputation, 
     for (BattlegroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
     {
         Player* player = _GetPlayerForTeam(TeamID, itr, "RewardReputationToTeam");
+
         if (!player)
+            continue;
+
+        if (player->GetTeam() != player->GetBGTeam())
             continue;
 
         uint32 repGain = Reputation;
@@ -952,9 +956,13 @@ void Battleground::RemovePlayerAtLeave(ObjectGuid guid, bool Transport, bool Sen
         // reset destination bg team
         player->SetBGTeam(0);
 
+        player->setFactionForRace(player->getRace());
+        player->InitDisplayIds();
+
         if (Transport)
             player->TeleportToBGEntryPoint();
 
+        sScriptMgr->OnPlayerRemoveFromBattleground(player, this);
         TC_LOG_DEBUG("bg.battleground", "Removed player %s from Battleground.", player->GetName().c_str());
     }
 
@@ -1097,6 +1105,30 @@ void Battleground::AddOrSetPlayerToCorrectBgGroup(Player* player, uint32 team)
                 }
         }
     }
+
+    if (!isArena())
+    {
+        if (team == ALLIANCE) {
+            player->setFaction(1);
+
+            if (player->GetTeam() != player->GetBGTeam()) {
+                static const uint32 displayids[] = { 20580, 20320, 20318, 19723, 19724, 20317, 20323, 21105 };
+                uint8 rand = urand(0, 7);
+                player->SetDisplayId(displayids[rand]);
+                player->SetNativeDisplayId(displayids[rand]);
+            }
+        }
+        else {
+            player->setFaction(2);
+
+            if (player->GetTeam() != player->GetBGTeam()) {
+                static const uint32 displayids[] = { 20319, 20584, 20578, 20322, 20316, 21267, 20321, 20582, 20583 };
+                uint8 rand = urand(0, 8);
+                player->SetDisplayId(displayids[rand]);
+                player->SetNativeDisplayId(displayids[rand]);
+            }
+        }
+    }
 }
 
 // This method should be called when player logs into running battleground
@@ -1112,6 +1144,10 @@ void Battleground::EventPlayerLoggedIn(Player* player)
             break;
         }
     }
+
+    if (!IsPlayerInBattleground(guid))
+        return;
+
     m_Players[guid].OfflineRemoveTime = 0;
     PlayerAddedToBGCheckIfBGIsRunning(player);
     // if battleground is starting, then add preparation aura
@@ -1700,7 +1736,7 @@ void Battleground::HandleKillPlayer(Player* victim, Player* killer)
             if (!creditedPlayer || creditedPlayer == killer)
                 continue;
 
-            if (creditedPlayer->GetTeam() == killer->GetTeam() && creditedPlayer->IsAtGroupRewardDistance(victim))
+            if (creditedPlayer->GetBGTeam() == killer->GetBGTeam() && creditedPlayer->IsAtGroupRewardDistance(victim))
                 UpdatePlayerScore(creditedPlayer, SCORE_HONORABLE_KILLS, 1);
         }
     }
