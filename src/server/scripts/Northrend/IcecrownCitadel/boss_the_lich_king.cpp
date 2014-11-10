@@ -351,7 +351,8 @@ enum MiscData
 enum Misc
 {
     DATA_PLAGUE_STACK           = 70337,
-    DATA_VILE                   = 45814622
+    DATA_VILE                   = 45814622,
+    DATA_HEROIC_FROSTMOURNE     = 3
 };
 
 class NecroticPlagueTargetCheck : public std::unary_function<Unit*, bool>
@@ -520,9 +521,10 @@ class boss_the_lich_king : public CreatureScript
                 events.SetPhase(PHASE_INTRO);
                 Initialize();
                 SetEquipmentSlots(true);
+                _isInHeroicFrostmournEvent = false;
             }
 
-            void JustDied(Unit* /*killer*/) override
+            void JustDied(Unit* killer) override
             {
                 _JustDied();
                 DoCastAOE(SPELL_PLAY_MOVIE, false);
@@ -531,6 +533,11 @@ class boss_the_lich_king : public CreatureScript
                 me->GetMotionMaster()->MoveFall();
                 if (Creature* frostmourne = me->FindNearestCreature(NPC_FROSTMOURNE_TRIGGER, 50.0f))
                     frostmourne->DespawnOrUnsummon();
+
+                // !Hack - Reward credit for the Lich King's Last Stand (24748) to all raid members since there are range issues.
+                if (Is25ManRaid())
+                    if (Player* player = killer->ToPlayer())
+                        player->RewardPlayerAndGroupAtEvent(38153, player);
             }
 
             void EnterCombat(Unit* target) override
@@ -634,6 +641,13 @@ class boss_the_lich_king : public CreatureScript
                         summons.DoAction(ACTION_TELEPORT_BACK, pred);
                         if (!IsHeroic())
                             Talk(SAY_LK_FROSTMOURNE_ESCAPE);
+                        _isInHeroicFrostmournEvent = false;
+                        for (SummonList::iterator i = summons.begin(); i != summons.end(); ++i)
+                        {
+                            Creature* summon = ObjectAccessor::GetCreature(*me, *i);
+                            if (summon && summon->GetEntry() == NPC_RAGING_SPIRIT)
+                                summon->AI()->DoAction(ACTION_TELEPORT_BACK);
+                        }
                         break;
                     }
                     default:
@@ -649,6 +663,8 @@ class boss_the_lich_king : public CreatureScript
                         return _necroticPlagueStack;
                     case DATA_VILE:
                         return _vileSpiritExplosions;
+                    case DATA_HEROIC_FROSTMOURNE:
+                        return _isInHeroicFrostmournEvent;
                     default:
                         break;
                 }
@@ -1018,6 +1034,25 @@ class boss_the_lich_king : public CreatureScript
                             events.ScheduleEvent(EVENT_VILE_SPIRITS, urand(35000, 40000), EVENT_GROUP_VILE_SPIRITS, PHASE_THREE);
                             break;
                         case EVENT_HARVEST_SOULS:
+                            // Stop vile sprits at start of cast not after
+                            for (SummonList::iterator i = summons.begin(); i != summons.end(); ++i)
+                            {
+                                Creature* summon = ObjectAccessor::GetCreature(*me, *i);
+                                if (summon && summon->GetEntry() == NPC_VILE_SPIRIT)
+                                {
+                                    summon->m_Events.KillAllEvents(true);
+                                    summon->m_Events.AddEvent(new VileSpiritActivateEvent(summon), summon->m_Events.CalculateTime(70000));
+                                    summon->GetMotionMaster()->MoveRandom(10.0f);
+                                    summon->SetReactState(REACT_PASSIVE);
+                                }
+                                else if (summon && summon->GetEntry() == NPC_RAGING_SPIRIT)
+                                {
+                                    summon->m_Events.KillAllEvents(true); // this should prevent instant Soul Shrieks that get pilled up since we freeze events during Frostmourne phase.
+                                    summon->SetReactState(REACT_PASSIVE);
+                                    summon->AddUnitState(UNIT_STATE_ROOT);
+                                }
+                            }
+                            _isInHeroicFrostmournEvent = true;
                             Talk(SAY_LK_HARVEST_SOUL);
                             DoCastAOE(SPELL_HARVEST_SOULS);
                             events.ScheduleEvent(EVENT_HARVEST_SOULS, urand(100000, 110000), 0, PHASE_THREE);
@@ -1043,18 +1078,6 @@ class boss_the_lich_king : public CreatureScript
                                     spawner->CastSpell(spawner, SPELL_SUMMON_SPIRIT_BOMB_1, true);  // summons bombs randomly
                                     spawner->CastSpell(spawner, SPELL_SUMMON_SPIRIT_BOMB_2, true);  // summons bombs on players
                                     spawner->m_Events.AddEvent(new TriggerWickedSpirit(spawner), spawner->m_Events.CalculateTime(3000));
-                                }
-
-                                for (SummonList::iterator i = summons.begin(); i != summons.end(); ++i)
-                                {
-                                    Creature* summon = ObjectAccessor::GetCreature(*me, *i);
-                                    if (summon && summon->GetEntry() == NPC_VILE_SPIRIT)
-                                    {
-                                        summon->m_Events.KillAllEvents(true);
-                                        summon->m_Events.AddEvent(new VileSpiritActivateEvent(summon), summon->m_Events.CalculateTime(50000));
-                                        summon->GetMotionMaster()->MoveRandom(10.0f);
-                                        summon->SetReactState(REACT_PASSIVE);
-                                    }
                                 }
                             }
                             break;
@@ -1127,6 +1150,7 @@ class boss_the_lich_king : public CreatureScript
         private:
             uint32 _necroticPlagueStack;
             uint32 _vileSpiritExplosions;
+            bool _isInHeroicFrostmournEvent;
         };
 
         CreatureAI* GetAI(Creature* creature) const override
@@ -1373,6 +1397,12 @@ class npc_raging_spirit : public CreatureScript
                 DoCast(me, SPELL_BOSS_HITTIN_YA, true);
             }
 
+            bool CanAIAttack(Unit const* target) const override
+            {
+                // The spirit must not select targets in frostmourne room if he killed everyone outside
+                return !target->HasAura(SPELL_IN_FROSTMOURNE_ROOM) || target->HasAura(SPELL_HARVEST_SOULS);
+            }
+
             void IsSummonedBy(Unit* /*summoner*/) override
             {
                 // player is the spellcaster so register summon manually
@@ -1388,15 +1418,28 @@ class npc_raging_spirit : public CreatureScript
                     summon->SetTempSummonType(TEMPSUMMON_CORPSE_DESPAWN);
             }
 
+            void DoAction(int32 action) override
+            {
+                if (action != ACTION_TELEPORT_BACK)
+                    return;
+
+                _events.ScheduleEvent(EVENT_SOUL_SHRIEK, urand(12000, 15000));
+                me->SetReactState(REACT_DEFENSIVE);
+                me->ClearUnitState(UNIT_STATE_ROOT);
+            }
+
             void UpdateAI(uint32 diff) override
             {
-                if (!UpdateVictim())
-                    return;
+                if (Creature* lichKing = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_THE_LICH_KING)))
+                    if (!lichKing->AI()->GetData(DATA_HEROIC_FROSTMOURNE))
+                        if (!UpdateVictim())
+                            return;
 
                 _events.Update(diff);
 
-                if (me->HasUnitState(UNIT_STATE_CASTING))
-                    return;
+                if (Creature* lichKing = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_THE_LICH_KING)))
+                    if (me->HasUnitState(UNIT_STATE_CASTING) || lichKing->AI()->GetData(DATA_HEROIC_FROSTMOURNE))
+                        return;
 
                 while (uint32 eventId = _events.ExecuteEvent())
                 {
@@ -1441,8 +1484,8 @@ class npc_valkyr_shadowguard : public CreatureScript
             {
                 _events.Reset();
                 me->SetReactState(REACT_PASSIVE);
+                me->SetDisableGravity(true);
                 DoCast(me, SPELL_WINGS_OF_THE_DAMNED, false);
-                me->SetSpeed(MOVE_FLIGHT, 0.642857f, true);
             }
 
             void IsSummonedBy(Unit* /*summoner*/) override
@@ -1488,13 +1531,18 @@ class npc_valkyr_shadowguard : public CreatureScript
                 switch (id)
                 {
                     case POINT_DROP_PLAYER:
-                        DoCastAOE(SPELL_EJECT_ALL_PASSENGERS);
-                        me->DespawnOrUnsummon(1000);
+                        // If valkyr is not actually at drop point move to it again
+                        if (me->GetDistance(_dropPoint) > 1.0f)
+                            _events.ScheduleEvent(EVENT_MOVE_TO_DROP_POS, 0);
+                        else
+                        {
+                            DoCastAOE(SPELL_EJECT_ALL_PASSENGERS);
+                            me->DespawnOrUnsummon(1000);
+                        }
                         break;
                     case POINT_CHARGE:
                         if (Player* target = ObjectAccessor::GetPlayer(*me, _grabbedPlayer))
                         {
-                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                             if (GameObject* platform = ObjectAccessor::GetGameObject(*me, _instance->GetGuidData(DATA_ARTHAS_PLATFORM)))
                             {
                                 std::list<Creature*> triggers;
@@ -1507,7 +1555,6 @@ class npc_valkyr_shadowguard : public CreatureScript
                                 DoCast(target, SPELL_VALKYR_CARRY);
                                 _dropPoint.Relocate(triggers.front());
                                 _events.ScheduleEvent(EVENT_MOVE_TO_DROP_POS, 1500);
-
                             }
                         }
                         else
@@ -1545,6 +1592,7 @@ class npc_valkyr_shadowguard : public CreatureScript
                             }
                             break;
                         case EVENT_MOVE_TO_DROP_POS:
+                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                             me->GetMotionMaster()->MovePoint(POINT_DROP_PLAYER, _dropPoint);
                             break;
                         case EVENT_LIFE_SIPHON:
@@ -2534,11 +2582,14 @@ class spell_the_lich_king_valkyr_target_search : public SpellScriptLoader
                 return true;
             }
 
+            bool Load() override
+            {
+                _target = NULL;
+                return true;
+            }
+
             void SelectTarget(std::list<WorldObject*>& targets)
             {
-                if (targets.empty())
-                    return;
-
                 targets.remove_if(Trinity::UnitAuraCheck(true, GetSpellInfo()->Id));
                 if (targets.empty())
                     return;
@@ -2731,6 +2782,8 @@ class spell_the_lich_king_vile_spirit_move_target_search : public SpellScriptLoa
             {
                 if (targets.empty())
                     return;
+
+                targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_IN_FROSTMOURNE_ROOM));
 
                 _target = Trinity::Containers::SelectRandomContainerElement(targets);
             }
@@ -3250,4 +3303,7 @@ void AddSC_boss_the_lich_king()
     new spell_the_lich_king_play_movie();
     new achievement_been_waiting_long_time();
     new achievement_neck_deep_in_vile();
+    // Vehicle Hack(Strangulate Vehicle)
+    if (VehicleSeatEntry* vehSeat = const_cast<VehicleSeatEntry*>(sVehicleSeatStore.LookupEntry(6166)))
+    vehSeat->m_flags |= 0x400;
 }
