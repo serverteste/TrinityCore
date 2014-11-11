@@ -116,6 +116,9 @@ enum DataTypes
     DATA_TERENAS_MENETHIL           = 39,
     DATA_ENEMY_GUNSHIP              = 40,
     DATA_UPPERSPIRE_TELE_ACT        = 41,
+
+    // TW
+    DATA_CRIMSON_HALL_DOOR          = 42
 };
 
 enum CreaturesIds
@@ -148,6 +151,7 @@ enum CreaturesIds
 
     // Weekly quests
     NPC_INFILTRATOR_MINCHAR                     = 38471,
+    NPC_INFILTRATOR_MINCHAR_25                  = 39123,
     NPC_KOR_KRON_LIEUTENANT                     = 38491,
     NPC_SKYBREAKER_LIEUTENANT                   = 38492,
     NPC_ROTTING_FROST_GIANT_10                  = 38490,
@@ -316,7 +320,13 @@ enum CreaturesIds
     NPC_FROSTMOURNE_TRIGGER                     = 38584,
 
     // Generic
-    NPC_INVISIBLE_STALKER                       = 30298
+    NPC_INVISIBLE_STALKER                       = 30298,
+
+    // TrueWoW Custom Additions
+    NPC_DARKFALLEN_NOBLE                        = 37663,
+    NPC_DARKFALLEN_BLOODKNIGHT                  = 37595,
+    NPC_DARKFALLEN_ARCHMAGE                     = 37664,
+    NPC_DARKFALLEN_ADVISOR                      = 37571
 };
 
 enum GameObjectsIds
