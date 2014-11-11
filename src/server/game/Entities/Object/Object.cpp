@@ -1250,6 +1250,14 @@ bool WorldObject::IsWithinLOSInMap(const WorldObject* obj) const
     if (!IsInMap(obj))
         return false;
 
+    // Hack for ice tomb's gameobject
+    if (obj->GetTypeId() == TYPEID_UNIT)
+        if (obj->GetEntry() == 36980 /* Ice Tomb */)
+            return true;
+    if (GetTypeId() == TYPEID_UNIT)
+        if (GetEntry() == 36980 /* Ice Tomb */)
+            return true;
+
     float ox, oy, oz;
     obj->GetPosition(ox, oy, oz);
     return IsWithinLOS(ox, oy, oz);
@@ -2391,6 +2399,14 @@ Position WorldObject::GetNearPosition(float dist, float angle)
 Position WorldObject::GetFirstCollisionPosition(float dist, float angle)
 {
     Position pos = GetPosition();
+    MovePositionToFirstCollision(pos, dist, angle);
+    return pos;
+}
+
+Position WorldObject::GetFirstCollisionPosition(float dist, float angle, float destZ)
+{
+    Position pos = GetPosition();
+    pos.m_positionZ = destZ;
     MovePositionToFirstCollision(pos, dist, angle);
     return pos;
 }
