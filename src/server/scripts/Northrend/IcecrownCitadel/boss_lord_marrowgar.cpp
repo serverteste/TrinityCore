@@ -148,6 +148,7 @@ class boss_lord_marrowgar : public CreatureScript
                 events.ScheduleEvent(EVENT_ENRAGE, 600000);
                 _boneSlice = false;
                 _boneSpikeImmune.clear();
+                me->SetReactState(REACT_DEFENSIVE);
             }
 
             void EnterCombat(Unit* /*who*/) override
@@ -227,6 +228,7 @@ class boss_lord_marrowgar : public CreatureScript
                             events.ScheduleEvent(EVENT_WARN_BONE_STORM, urand(90000, 95000));
                             break;
                         case EVENT_BONE_STORM_BEGIN:
+                            me->SetReactState(REACT_PASSIVE);
                             if (Aura* pStorm = me->GetAura(SPELL_BONE_STORM))
                                 pStorm->SetDuration(int32(_boneStormDuration));
                             me->SetSpeed(MOVE_RUN, _baseSpeed*3.0f, true);
@@ -244,6 +246,7 @@ class boss_lord_marrowgar : public CreatureScript
                             break;
                         }
                         case EVENT_BONE_STORM_END:
+                            me->SetReactState(REACT_AGGRESSIVE);
                             if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
                                 me->GetMotionMaster()->MovementExpired();
                             me->GetMotionMaster()->MoveChase(me->GetVictim());
@@ -387,7 +390,7 @@ class npc_coldflame : public CreatureScript
 
                     float ang = Position::NormalizeOrientation(pos.GetAngle(target));
                     me->SetOrientation(ang);
-                    owner->GetNearPoint2D(pos.m_positionX, pos.m_positionY, 15.0f - owner->GetObjectSize(), ang);
+                    owner->GetNearPoint2D(pos.m_positionX, pos.m_positionY, 5.0f - owner->GetObjectSize(), ang);
                 }
 
                 me->NearTeleportTo(pos.GetPositionX(), pos.GetPositionY(), me->GetPositionZ(), me->GetOrientation());
